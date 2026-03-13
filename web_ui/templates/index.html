@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoShowTracker</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-shell">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">&#9654;</div>
+                <span class="brand-text">ShowTracker</span>
+            </div>
+
+            <ul class="nav-links">
+                <li>
+                    <a href="#dashboard" class="nav-link active" data-route="dashboard">
+                        <span class="nav-icon">&#9632;</span>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#shows" class="nav-link" data-route="shows">
+                        <span class="nav-icon">&#9733;</span>
+                        <span>Shows</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#unresolved" class="nav-link" data-route="unresolved">
+                        <span class="nav-icon">&#9888;</span>
+                        <span>Unresolved</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#settings" class="nav-link" data-route="settings">
+                        <span class="nav-icon">&#9881;</span>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="connection-badge" id="connectionBadge">
+                    <span class="conn-dot"></span>
+                    <span class="conn-text">Checking...</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="content" id="content">
+            <!-- Views are rendered here by app.js -->
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading...</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,309 @@
+"""Episode resolution engine.
+
+Ties together parsing, URL matching, alias lookup, caching, and TMDb search
+to resolve raw detection signals into canonical episode identifications.
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+from typing import Any, Protocol
+
+from rapidfuzz import fuzz
+
+from show_tracker.identification.confidence import calculate_confidence
+from show_tracker.identification.parser import ParseResult, parse_media_string
+from show_tracker.identification.tmdb_client import (
+    TMDbClient,
+    TMDbError,
+    TMDbNotFoundError,
+)
+from show_tracker.identification.url_patterns import match_url
+
+logger = logging.getLogger(__name__)
+
+FUZZY_THRESHOLD = 0.80  # minimum fuzzy ratio to accept a TMDb match
+
+
+@dataclass(frozen=True)
+class IdentificationResult:
+    """Canonical identification of a detected episode."""
+
+    tmdb_episode_id: int | None
+    tmdb_show_id: int | None
+    show_name: str
+    season: int | None
+    episode: int | None
+    episode_title: str | None
+    confidence: float  # 0.0 - 1.0
+    source: str
+    raw_input: str
+    match_method: str  # "exact_url", "guessit+tmdb_fuzzy", "alias_lookup", "cache_hit"
+
+
+class AliasStore(Protocol):
+    """Protocol for looking up show aliases."""
+
+    def lookup_alias(self, alias: str) -> int | None:
+        """Return the TMDb show ID for *alias*, or None if unknown."""
+        ...
+
+
+class CacheStore(Protocol):
+    """Protocol for caching TMDb search/episode results."""
+
+    def get_show_id(self, query: str) -> int | None:
+        """Return cached TMDb show ID for a search query, or None."""
+        ...
+
+    def set_show_id(self, query: str, tmdb_id: int) -> None:
+        """Cache a search query -> TMDb show ID mapping."""
+        ...
+
+    def get_episode(self, tmdb_show_id: int, season: int, episode: int) -> dict[str, Any] | None:
+        """Return cached episode data, or None."""
+        ...
+
+    def set_episode(self, tmdb_show_id: int, season: int, episode: int, data: dict[str, Any]) -> None:
+        """Cache episode data."""
+        ...
+
+
+class _NullAliasStore:
+    """Default no-op alias store."""
+
+    def lookup_alias(self, alias: str) -> int | None:
+        return None
+
+
+class _NullCacheStore:
+    """Default no-op cache store."""
+
+    def get_show_id(self, query: str) -> int | None:
+        return None
+
+    def set_show_id(self, query: str, tmdb_id: int) -> None:
+        pass
+
+    def get_episode(self, tmdb_show_id: int, season: int, episode: int) -> dict[str, Any] | None:
+        return None
+
+    def set_episode(self, tmdb_show_id: int, season: int, episode: int, data: dict[str, Any]) -> None:
+        pass
+
+
+class EpisodeResolver:
+    """Resolves raw detection strings to canonical episode identifications.
+
+    Args:
+        tmdb_client: A configured TMDb API client.
+        alias_store: Optional store for show alias lookups.
+        cache_store: Optional store for caching TMDb results.
+    """
+
+    def __init__(
+        self,
+        tmdb_client: TMDbClient,
+        alias_store: AliasStore | None = None,
+        cache_store: CacheStore | None = None,
+    ) -> None:
+        self.tmdb = tmdb_client
+        self.aliases: AliasStore = alias_store or _NullAliasStore()
+        self.cache: CacheStore = cache_store or _NullCacheStore()
+
+    def resolve(
+        self,
+        raw_string: str,
+        source_type: str,
+        url: str | None = None,
+    ) -> IdentificationResult:
+        """Resolve a raw string (and optional URL) to a canonical episode.
+
+        Resolution order:
+        1. URL pattern matching (if URL provided).
+        2. Parse the raw string with guessit.
+        3. Check show_aliases for known mappings.
+        4. Check cache for prior TMDb lookups.
+        5. Search TMDb with fuzzy matching.
+        6. Fetch episode details.
+
+        Args:
+            raw_string: The raw detection string.
+            source_type: Detection source (e.g. "browser_title", "smtc").
+            url: Optional URL associated with the detection.
+
+        Returns:
+            An IdentificationResult (may have None IDs if resolution failed).
+        """
+        # Step 1: URL pattern matching
+        url_match = match_url(url) if url else None
+
+        # Step 2: Parse the raw string
+        parsed = parse_media_string(raw_string, source_type, url_match=url_match)
+
+        # If URL match gave us a known platform ID, that is the strongest signal
+        if url_match is not None and url_match.platform_id is not None:
+            # For known platforms like Netflix, the platform_id can be used
+            # directly via find_by_external_id or as a high-confidence signal
+            match_method = "exact_url"
+        else:
+            match_method = "guessit+tmdb_fuzzy"
+
+        title_query = parsed.title.strip()
+        if not title_query:
+            return self._unresolved(parsed, source_type, match_method)
+
+        # Step 3: Check alias table
+        tmdb_show_id = self.aliases.lookup_alias(title_query)
+        if tmdb_show_id is None:
+            # Also try lowercase
+            tmdb_show_id = self.aliases.lookup_alias(title_query.lower())
+        if tmdb_show_id is not None:
+            match_method = "alias_lookup"
+            return self._resolve_with_show_id(
+                tmdb_show_id, parsed, source_type, match_method, tmdb_match_score=0.95
+            )
+
+        # Step 4: Check cache
+        cached_id = self.cache.get_show_id(title_query.lower())
+        if cached_id is not None:
+            match_method = "cache_hit"
+            return self._resolve_with_show_id(
+                cached_id, parsed, source_type, match_method, tmdb_match_score=0.90
+            )
+
+        # Step 5: Search TMDb
+        try:
+            results = self.tmdb.search_show(title_query, year=parsed.year)
+        except TMDbError:
+            logger.exception("TMDb search failed for %r", title_query)
+            return self._unresolved(parsed, source_type, match_method)
+
+        if not results:
+            return self._unresolved(parsed, source_type, match_method)
+
+        # Fuzzy match against results, prefer higher popularity for ties
+        best_show: dict[str, Any] | None = None
+        best_score = 0.0
+
+        for show in results:
+            for name_field in (show.get("name", ""), show.get("original_name", "")):
+                if not name_field:
+                    continue
+                ratio = fuzz.ratio(title_query.lower(), name_field.lower()) / 100.0
+                # Slight boost for more popular shows when scores are close
+                popularity_boost = min(show.get("popularity", 0) / 10000.0, 0.05)
+                adjusted = ratio + popularity_boost
+                if adjusted > best_score:
+                    best_score = adjusted
+                    best_show = show
+
+        # The actual fuzzy score (without popularity boost) for confidence calc
+        if best_show is not None:
+            raw_score = max(
+                fuzz.ratio(title_query.lower(), best_show.get("name", "").lower()) / 100.0,
+                fuzz.ratio(
+                    title_query.lower(),
+                    best_show.get("original_name", "").lower(),
+                )
+                / 100.0,
+            )
+        else:
+            raw_score = 0.0
+
+        if best_show is None or raw_score < FUZZY_THRESHOLD:
+            return self._unresolved(parsed, source_type, match_method)
+
+        tmdb_show_id = best_show["id"]
+
+        # Cache the mapping
+        self.cache.set_show_id(title_query.lower(), tmdb_show_id)
+
+        return self._resolve_with_show_id(
+            tmdb_show_id, parsed, source_type, match_method, tmdb_match_score=raw_score
+        )
+
+    # -- internal helpers --------------------------------------------------
+
+    def _resolve_with_show_id(
+        self,
+        tmdb_show_id: int,
+        parsed: ParseResult,
+        source_type: str,
+        match_method: str,
+        tmdb_match_score: float,
+    ) -> IdentificationResult:
+        """Fetch episode details given a resolved TMDb show ID."""
+        season = parsed.season
+        episode = parsed.episode
+        show_name = parsed.title
+        episode_title = parsed.episode_title
+        tmdb_episode_id: int | None = None
+
+        # Try to get the show name from TMDb for canonical naming
+        try:
+            show_data = self.tmdb.get_show(tmdb_show_id)
+            show_name = show_data.get("name", show_name)
+        except TMDbError:
+            logger.debug("Could not fetch show details for TMDb ID %d", tmdb_show_id)
+
+        # If both season and episode are known, fetch episode details
+        if season is not None and episode is not None:
+            cached_ep = self.cache.get_episode(tmdb_show_id, season, episode)
+            if cached_ep is not None:
+                tmdb_episode_id = cached_ep.get("id")
+                episode_title = episode_title or cached_ep.get("name")
+            else:
+                try:
+                    ep_data = self.tmdb.get_episode(tmdb_show_id, season, episode)
+                    tmdb_episode_id = ep_data.get("id")
+                    episode_title = episode_title or ep_data.get("name")
+                    self.cache.set_episode(tmdb_show_id, season, episode, ep_data)
+                except TMDbNotFoundError:
+                    logger.debug(
+                        "Episode S%02dE%02d not found for TMDb show %d",
+                        season, episode, tmdb_show_id,
+                    )
+                except TMDbError:
+                    logger.exception(
+                        "Failed to fetch episode S%02dE%02d for TMDb show %d",
+                        season, episode, tmdb_show_id,
+                    )
+
+        confidence = calculate_confidence(parsed, tmdb_match_score, source_type, match_method)
+
+        return IdentificationResult(
+            tmdb_episode_id=tmdb_episode_id,
+            tmdb_show_id=tmdb_show_id,
+            show_name=show_name,
+            season=season,
+            episode=episode,
+            episode_title=episode_title,
+            confidence=confidence,
+            source=source_type,
+            raw_input=parsed.raw_input,
+            match_method=match_method,
+        )
+
+    def _unresolved(
+        self,
+        parsed: ParseResult,
+        source_type: str,
+        match_method: str,
+    ) -> IdentificationResult:
+        """Build a low-confidence result when resolution fails."""
+        confidence = calculate_confidence(parsed, 0.0, source_type, match_method)
+
+        return IdentificationResult(
+            tmdb_episode_id=None,
+            tmdb_show_id=None,
+            show_name=parsed.title,
+            season=parsed.season,
+            episode=parsed.episode,
+            episode_title=parsed.episode_title,
+            confidence=confidence,
+            source=source_type,
+            raw_input=parsed.raw_input,
+            match_method=match_method,
+        )

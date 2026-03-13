@@ -1,0 +1,797 @@
+/**
+ * AutoShowTracker — Frontend Application
+ *
+ * Vanilla JS single-page application with hash-based routing.
+ * No build step, no external dependencies.
+ */
+
+// ===========================================================================
+// API Client
+// ===========================================================================
+
+const API = {
+    base: "",
+
+    async _fetch(path, options = {}) {
+        try {
+            const resp = await fetch(`${this.base}${path}`, {
+                headers: { "Content-Type": "application/json" },
+                ...options,
+            });
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error(`HTTP ${resp.status}: ${text}`);
+            }
+            return await resp.json();
+        } catch (err) {
+            console.error(`API error: ${path}`, err);
+            throw err;
+        }
+    },
+
+    // Health
+    health() {
+        return this._fetch("/api/health");
+    },
+
+    // Media
+    currentlyWatching() {
+        return this._fetch("/api/currently-watching");
+    },
+
+    // History
+    recentHistory(limit = 50) {
+        return this._fetch(`/api/history/recent?limit=${limit}`);
+    },
+    shows() {
+        return this._fetch("/api/history/shows");
+    },
+    showDetail(showId) {
+        return this._fetch(`/api/history/shows/${showId}`);
+    },
+    showProgress(showId) {
+        return this._fetch(`/api/history/shows/${showId}/progress`);
+    },
+    nextToWatch() {
+        return this._fetch("/api/history/next-to-watch");
+    },
+    stats() {
+        return this._fetch("/api/history/stats");
+    },
+
+    // Unresolved
+    unresolved() {
+        return this._fetch("/api/unresolved");
+    },
+    resolveEvent(id, body) {
+        return this._fetch(`/api/unresolved/${id}/resolve`, {
+            method: "POST",
+            body: JSON.stringify(body),
+        });
+    },
+    dismissEvent(id) {
+        return this._fetch(`/api/unresolved/${id}/dismiss`, {
+            method: "POST",
+        });
+    },
+    searchTmdb(id, query) {
+        return this._fetch(`/api/unresolved/${id}/search`, {
+            method: "POST",
+            body: JSON.stringify({ query }),
+        });
+    },
+
+    // Settings
+    settings() {
+        return this._fetch("/api/settings");
+    },
+    updateSetting(key, value) {
+        return this._fetch(`/api/settings/${key}`, {
+            method: "PUT",
+            body: JSON.stringify({ value }),
+        });
+    },
+
+    // Aliases
+    addAlias(showId, alias) {
+        return this._fetch("/api/aliases", {
+            method: "POST",
+            body: JSON.stringify({ show_id: showId, alias }),
+        });
+    },
+    getAliases(showId) {
+        return this._fetch(`/api/aliases/${showId}`);
+    },
+    deleteAlias(aliasId) {
+        return this._fetch(`/api/aliases/${aliasId}`, { method: "DELETE" });
+    },
+};
+
+// ===========================================================================
+// Utility Helpers
+// ===========================================================================
+
+function formatDuration(seconds) {
+    if (!seconds || seconds <= 0) return "0m";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+}
+
+function formatTimeAgo(isoString) {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+}
+
+function escapeHtml(str) {
+    if (!str) return "";
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function epCode(season, episode) {
+    const s = String(season).padStart(2, "0");
+    const e = String(episode).padStart(2, "0");
+    return `S${s}E${e}`;
+}
+
+function posterUrl(path) {
+    if (!path) return null;
+    if (path.startsWith("http")) return path;
+    return `https://image.tmdb.org/t/p/w300${path}`;
+}
+
+// ===========================================================================
+// Router
+// ===========================================================================
+
+const Router = {
+    routes: {},
+
+    register(pattern, handler) {
+        this.routes[pattern] = handler;
+    },
+
+    navigate(hash) {
+        window.location.hash = hash;
+    },
+
+    async resolve() {
+        const hash = window.location.hash.slice(1) || "dashboard";
+        const parts = hash.split("/");
+        const route = parts[0];
+        const params = parts.slice(1);
+
+        // Update active nav link
+        document.querySelectorAll(".nav-link").forEach((link) => {
+            const linkRoute = link.getAttribute("data-route");
+            link.classList.toggle(
+                "active",
+                linkRoute === route ||
+                    (route === "show" && linkRoute === "shows")
+            );
+        });
+
+        const handler = this.routes[route];
+        if (handler) {
+            try {
+                await handler(...params);
+            } catch (err) {
+                console.error("Route error:", err);
+                content().innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">!</div>
+                        <p class="empty-state-text">Error loading page: ${escapeHtml(err.message)}</p>
+                    </div>
+                `;
+            }
+        } else {
+            Router.navigate("dashboard");
+        }
+    },
+};
+
+function content() {
+    return document.getElementById("content");
+}
+
+// ===========================================================================
+// Views
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Dashboard
+// ---------------------------------------------------------------------------
+
+async function renderDashboard() {
+    content().innerHTML = `
+        <div class="page-header">
+            <h1 class="page-title">Dashboard</h1>
+            <p class="page-subtitle">Your watching activity at a glance</p>
+        </div>
+        <div class="now-watching hidden" id="nowWatching"></div>
+        <div class="stat-cards" id="statCards">
+            <div class="stat-card"><div class="stat-value">--</div><div class="stat-label">Total Watch Time</div></div>
+            <div class="stat-card"><div class="stat-value">--</div><div class="stat-label">Episodes</div></div>
+            <div class="stat-card"><div class="stat-value">--</div><div class="stat-label">Shows</div></div>
+        </div>
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header"><span class="card-title">Recently Watched</span></div>
+                <div id="recentList"><div class="loading-state"><div class="spinner"></div></div></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">Next Up</span></div>
+                <div id="nextUpList"><div class="loading-state"><div class="spinner"></div></div></div>
+            </div>
+        </div>
+    `;
+
+    // Load data in parallel
+    const [statsData, recentData, nextData] = await Promise.all([
+        API.stats().catch(() => null),
+        API.recentHistory(10).catch(() => []),
+        API.nextToWatch().catch(() => []),
+    ]);
+
+    // Stats
+    if (statsData) {
+        document.getElementById("statCards").innerHTML = `
+            <div class="stat-card">
+                <div class="stat-value">${formatDuration(statsData.total_watch_time_seconds)}</div>
+                <div class="stat-label">Total Watch Time</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${statsData.total_episodes_watched}</div>
+                <div class="stat-label">Episodes Watched</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${statsData.total_shows}</div>
+                <div class="stat-label">Shows Tracked</div>
+            </div>
+        `;
+    }
+
+    // Recent
+    const recentEl = document.getElementById("recentList");
+    if (recentData.length === 0) {
+        recentEl.innerHTML = `
+            <div class="empty-state">
+                <p class="empty-state-text">No watch history yet. Start watching something!</p>
+            </div>
+        `;
+    } else {
+        recentEl.innerHTML = `<ul class="recent-list">${recentData
+            .map(
+                (r) => `
+            <li class="recent-item">
+                <div class="recent-episode">
+                    <div class="recent-show">${escapeHtml(r.show_title)}</div>
+                    <div class="recent-ep">${epCode(r.season_number, r.episode_number)}${r.episode_title ? " - " + escapeHtml(r.episode_title) : ""}</div>
+                </div>
+                <span class="recent-badge ${r.completed ? "completed" : "partial"}">${r.completed ? "Watched" : "Partial"}</span>
+                <span class="recent-time">${formatTimeAgo(r.started_at)}</span>
+            </li>
+        `
+            )
+            .join("")}</ul>`;
+    }
+
+    // Next up
+    const nextEl = document.getElementById("nextUpList");
+    if (nextData.length === 0) {
+        nextEl.innerHTML = `
+            <div class="empty-state">
+                <p class="empty-state-text">No upcoming episodes.</p>
+            </div>
+        `;
+    } else {
+        nextEl.innerHTML = `<div class="next-up-list">${nextData
+            .map(
+                (n) => `
+            <div class="next-up-item" onclick="Router.navigate('show/${n.show_id}')">
+                <div>
+                    <div class="next-up-show">${escapeHtml(n.show_title)}</div>
+                    <div class="next-up-ep">${epCode(n.next_season, n.next_episode)}${n.episode_title ? " - " + escapeHtml(n.episode_title) : ""}</div>
+                </div>
+            </div>
+        `
+            )
+            .join("")}</div>`;
+    }
+
+    // Currently watching
+    updateNowWatching();
+}
+
+// ---------------------------------------------------------------------------
+// Shows List
+// ---------------------------------------------------------------------------
+
+async function renderShows() {
+    content().innerHTML = `
+        <div class="page-header">
+            <h1 class="page-title">Shows</h1>
+            <p class="page-subtitle">All tracked TV shows</p>
+        </div>
+        <div class="shows-grid" id="showsGrid">
+            <div class="loading-state"><div class="spinner"></div></div>
+        </div>
+    `;
+
+    const shows = await API.shows().catch(() => []);
+    const grid = document.getElementById("showsGrid");
+
+    if (shows.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">&#9733;</div>
+                <p class="empty-state-text">No shows tracked yet.</p>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = shows
+        .map((s) => {
+            const pct =
+                s.total_episodes > 0
+                    ? Math.round((s.episodes_watched / s.total_episodes) * 100)
+                    : 0;
+            const poster = posterUrl(s.poster_path);
+            return `
+            <div class="show-card" onclick="Router.navigate('show/${s.show_id}')">
+                <div class="show-card-poster">
+                    ${poster ? `<img src="${poster}" alt="" loading="lazy">` : "&#9733;"}
+                </div>
+                <div class="show-card-body">
+                    <div class="show-card-title">${escapeHtml(s.title)}</div>
+                    <div class="show-card-meta">
+                        ${s.status || "Unknown"} ${s.total_seasons ? " \u00b7 " + s.total_seasons + " seasons" : ""}
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: ${pct}%"></div>
+                    </div>
+                    <div class="progress-text">${s.episodes_watched} / ${s.total_episodes} episodes (${pct}%)</div>
+                </div>
+            </div>
+        `;
+        })
+        .join("");
+}
+
+// ---------------------------------------------------------------------------
+// Show Detail
+// ---------------------------------------------------------------------------
+
+async function renderShowDetail(showId) {
+    content().innerHTML = `
+        <a href="#shows" class="back-link">&larr; Back to Shows</a>
+        <div class="loading-state"><div class="spinner"></div></div>
+    `;
+
+    const detail = await API.showDetail(showId).catch(() => null);
+    if (!detail) {
+        content().innerHTML = `
+            <a href="#shows" class="back-link">&larr; Back to Shows</a>
+            <div class="empty-state">
+                <p class="empty-state-text">Show not found.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const poster = posterUrl(detail.poster_path);
+    const seasons = detail.seasons || [];
+    const activeSeason = seasons.length > 0 ? seasons[0].season_number : 1;
+
+    content().innerHTML = `
+        <a href="#shows" class="back-link">&larr; Back to Shows</a>
+        <div class="show-detail-header">
+            <div class="show-detail-poster">
+                ${poster ? `<img src="${poster}" alt="">` : "&#9733;"}
+            </div>
+            <div class="show-detail-info">
+                <h1 class="show-detail-title">${escapeHtml(detail.title)}</h1>
+                <div class="show-detail-meta">
+                    ${detail.status ? `<span>${escapeHtml(detail.status)}</span>` : ""}
+                    ${detail.first_air_date ? `<span>${detail.first_air_date}</span>` : ""}
+                    ${detail.total_seasons ? `<span>${detail.total_seasons} seasons</span>` : ""}
+                    ${detail.tmdb_id ? `<span>TMDb #${detail.tmdb_id}</span>` : ""}
+                </div>
+            </div>
+        </div>
+        <div class="season-tabs" id="seasonTabs">
+            ${seasons
+                .map(
+                    (s) =>
+                        `<button class="season-tab ${s.season_number === activeSeason ? "active" : ""}"
+                            data-season="${s.season_number}">Season ${s.season_number}</button>`
+                )
+                .join("")}
+        </div>
+        <div class="episode-grid" id="episodeGrid"></div>
+    `;
+
+    // Render episodes for active season
+    function renderSeason(seasonNum) {
+        const season = seasons.find((s) => s.season_number === seasonNum);
+        const grid = document.getElementById("episodeGrid");
+        if (!season || !season.episodes.length) {
+            grid.innerHTML = `<div class="empty-state"><p class="empty-state-text">No episodes in this season.</p></div>`;
+            return;
+        }
+        grid.innerHTML = season.episodes
+            .map(
+                (ep) => `
+            <div class="episode-item ${ep.watched ? "watched" : "unwatched"}">
+                <div class="episode-check">${ep.watched ? "\u2713" : ""}</div>
+                <span class="episode-number">E${String(ep.episode_number).padStart(2, "0")}</span>
+                <div class="episode-info">
+                    <div class="episode-title">${escapeHtml(ep.title) || "Untitled"}</div>
+                    <div class="episode-date">${ep.air_date || ""}${ep.watch_count > 0 ? " \u00b7 watched " + ep.watch_count + "x" : ""}</div>
+                </div>
+            </div>
+        `
+            )
+            .join("");
+    }
+
+    renderSeason(activeSeason);
+
+    // Tab click handlers
+    document.getElementById("seasonTabs").addEventListener("click", (e) => {
+        const tab = e.target.closest(".season-tab");
+        if (!tab) return;
+        document
+            .querySelectorAll(".season-tab")
+            .forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        renderSeason(parseInt(tab.dataset.season, 10));
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Unresolved
+// ---------------------------------------------------------------------------
+
+async function renderUnresolved() {
+    content().innerHTML = `
+        <div class="page-header">
+            <h1 class="page-title">Unresolved Events</h1>
+            <p class="page-subtitle">Media detections that need your help to identify</p>
+        </div>
+        <div class="unresolved-list" id="unresolvedList">
+            <div class="loading-state"><div class="spinner"></div></div>
+        </div>
+    `;
+
+    const events = await API.unresolved().catch(() => []);
+    const list = document.getElementById("unresolvedList");
+
+    if (events.length === 0) {
+        list.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">&#9888;</div>
+                <p class="empty-state-text">No unresolved events. Everything is identified!</p>
+            </div>
+        `;
+        return;
+    }
+
+    list.innerHTML = events
+        .map(
+            (ev) => `
+        <div class="unresolved-item" id="unresolved-${ev.id}">
+            <div class="unresolved-raw">${escapeHtml(ev.raw_input)}</div>
+            <div class="unresolved-meta">
+                Source: ${escapeHtml(ev.source)}
+                ${ev.source_detail ? " \u00b7 " + escapeHtml(ev.source_detail) : ""}
+                \u00b7 ${formatTimeAgo(ev.detected_at)}
+                ${ev.confidence != null ? " \u00b7 Confidence: " + (ev.confidence * 100).toFixed(0) + "%" : ""}
+            </div>
+            ${
+                ev.best_guess_show
+                    ? `<div class="unresolved-guess">Best guess: ${escapeHtml(ev.best_guess_show)} ${ev.best_guess_season != null ? epCode(ev.best_guess_season, ev.best_guess_episode || 0) : ""}</div>`
+                    : ""
+            }
+            <div class="unresolved-actions">
+                <button class="btn btn-primary btn-sm" onclick="searchUnresolved(${ev.id}, '${escapeHtml(ev.best_guess_show || ev.raw_input).replace(/'/g, "\\'")}')">Search TMDb</button>
+                <button class="btn btn-danger btn-sm" onclick="dismissUnresolved(${ev.id})">Dismiss</button>
+            </div>
+            <div class="search-results" id="search-${ev.id}"></div>
+        </div>
+    `
+        )
+        .join("");
+}
+
+async function searchUnresolved(eventId, defaultQuery) {
+    const query = prompt("Search TMDb for:", defaultQuery);
+    if (!query) return;
+
+    const container = document.getElementById(`search-${eventId}`);
+    container.innerHTML = `<div class="loading-state"><div class="spinner"></div><p>Searching...</p></div>`;
+
+    try {
+        const results = await API.searchTmdb(eventId, query);
+        if (results.length === 0) {
+            container.innerHTML = `<p style="color: var(--text-muted); font-size: 12px; padding: 8px 0;">No results found.</p>`;
+            return;
+        }
+
+        container.innerHTML = results
+            .map(
+                (r) => `
+            <div class="search-result-item" onclick="resolveToShow(${eventId}, ${r.tmdb_id}, '${escapeHtml(r.title).replace(/'/g, "\\'")}')">
+                <div class="search-result-info">
+                    <div class="search-result-title">${escapeHtml(r.title)}</div>
+                    <div class="search-result-year">${r.first_air_date || "Unknown"}</div>
+                </div>
+                <button class="btn btn-success btn-sm">Select</button>
+            </div>
+        `
+            )
+            .join("");
+    } catch (err) {
+        container.innerHTML = `<p style="color: var(--danger); font-size: 12px;">Search failed: ${escapeHtml(err.message)}</p>`;
+    }
+}
+
+async function resolveToShow(eventId, tmdbId, title) {
+    const season = prompt(`Season number for "${title}":`, "1");
+    if (!season) return;
+    const episode = prompt("Episode number:", "1");
+    if (!episode) return;
+
+    try {
+        // We need the show_id in our DB, which may differ from tmdb_id.
+        // For now, use tmdb_id as show_id (the API will handle lookup).
+        await API.resolveEvent(eventId, {
+            show_id: tmdbId,
+            season_number: parseInt(season, 10),
+            episode_number: parseInt(episode, 10),
+        });
+
+        // Remove the item from the list
+        const el = document.getElementById(`unresolved-${eventId}`);
+        if (el) el.remove();
+
+        // Check if list is now empty
+        const remaining = document.querySelectorAll(".unresolved-item");
+        if (remaining.length === 0) {
+            document.getElementById("unresolvedList").innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">&#9888;</div>
+                    <p class="empty-state-text">No unresolved events. Everything is identified!</p>
+                </div>
+            `;
+        }
+    } catch (err) {
+        alert("Failed to resolve: " + err.message);
+    }
+}
+
+async function dismissUnresolved(eventId) {
+    if (!confirm("Dismiss this event? It will not be tracked.")) return;
+
+    try {
+        await API.dismissEvent(eventId);
+        const el = document.getElementById(`unresolved-${eventId}`);
+        if (el) el.remove();
+
+        const remaining = document.querySelectorAll(".unresolved-item");
+        if (remaining.length === 0) {
+            document.getElementById("unresolvedList").innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">&#9888;</div>
+                    <p class="empty-state-text">No unresolved events. Everything is identified!</p>
+                </div>
+            `;
+        }
+    } catch (err) {
+        alert("Failed to dismiss: " + err.message);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+const SETTING_DEFINITIONS = [
+    {
+        key: "auto_log_threshold",
+        label: "Auto-Log Confidence Threshold",
+        hint: "Detections above this confidence are automatically logged (0.0 - 1.0)",
+        default: "0.9",
+    },
+    {
+        key: "review_threshold",
+        label: "Review Queue Threshold",
+        hint: "Detections below this confidence go to the unresolved queue (0.0 - 1.0)",
+        default: "0.7",
+    },
+    {
+        key: "ocr_enabled",
+        label: "OCR Fallback Enabled",
+        hint: "Enable OCR when window title and SMTC/MPRIS fail (true/false)",
+        default: "true",
+    },
+    {
+        key: "activitywatch_port",
+        label: "ActivityWatch Port",
+        hint: "Port where aw-server-rust listens",
+        default: "5600",
+    },
+    {
+        key: "heartbeat_interval",
+        label: "Heartbeat Interval (seconds)",
+        hint: "How often to send heartbeats during playback",
+        default: "30",
+    },
+];
+
+async function renderSettings() {
+    content().innerHTML = `
+        <div class="page-header">
+            <h1 class="page-title">Settings</h1>
+            <p class="page-subtitle">Configure AutoShowTracker behavior</p>
+        </div>
+        <div class="settings-form" id="settingsForm">
+            <div class="loading-state"><div class="spinner"></div></div>
+        </div>
+    `;
+
+    const settings = await API.settings().catch(() => []);
+    const settingsMap = {};
+    settings.forEach((s) => (settingsMap[s.key] = s.value));
+
+    const form = document.getElementById("settingsForm");
+    form.innerHTML = SETTING_DEFINITIONS.map(
+        (def) => `
+        <div class="form-group">
+            <label class="form-label" for="setting-${def.key}">${def.label}</label>
+            <input class="form-input" id="setting-${def.key}"
+                type="text"
+                value="${escapeHtml(settingsMap[def.key] || def.default)}"
+                data-key="${def.key}">
+            <span class="form-hint">${def.hint}</span>
+        </div>
+    `
+    ).join("");
+
+    form.innerHTML += `
+        <div style="margin-top: 8px;">
+            <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+            <span id="settingsSaveStatus" style="margin-left: 12px; font-size: 12px; color: var(--success);"></span>
+        </div>
+    `;
+
+    document.getElementById("saveSettingsBtn").addEventListener("click", async () => {
+        const statusEl = document.getElementById("settingsSaveStatus");
+        statusEl.textContent = "Saving...";
+        statusEl.style.color = "var(--text-muted)";
+
+        try {
+            const inputs = form.querySelectorAll(".form-input[data-key]");
+            for (const input of inputs) {
+                await API.updateSetting(input.dataset.key, input.value);
+            }
+            statusEl.textContent = "Saved!";
+            statusEl.style.color = "var(--success)";
+        } catch (err) {
+            statusEl.textContent = "Error: " + err.message;
+            statusEl.style.color = "var(--danger)";
+        }
+
+        setTimeout(() => {
+            statusEl.textContent = "";
+        }, 3000);
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Currently Watching (auto-refresh)
+// ---------------------------------------------------------------------------
+
+let nowWatchingTimer = null;
+
+async function updateNowWatching() {
+    try {
+        const data = await API.currentlyWatching();
+        const el = document.getElementById("nowWatching");
+        if (!el) return;
+
+        if (data.is_watching && data.title) {
+            el.classList.remove("hidden");
+            let progressText = "";
+            if (data.position != null && data.duration) {
+                const pct = Math.round((data.position / data.duration) * 100);
+                progressText = ` \u00b7 ${formatDuration(Math.round(data.position))} / ${formatDuration(Math.round(data.duration))} (${pct}%)`;
+            }
+            el.innerHTML = `
+                <div class="now-pulse"></div>
+                <div class="now-watching-info">
+                    <div class="now-watching-label">Now Watching</div>
+                    <div class="now-watching-title">${escapeHtml(data.title)}</div>
+                    <div class="now-watching-meta">${escapeHtml(data.tab_url || "")}${progressText}</div>
+                </div>
+            `;
+        } else {
+            el.classList.add("hidden");
+        }
+    } catch (_) {
+        // Service unavailable
+    }
+}
+
+function startNowWatchingRefresh() {
+    stopNowWatchingRefresh();
+    nowWatchingTimer = setInterval(updateNowWatching, 10000);
+}
+
+function stopNowWatchingRefresh() {
+    if (nowWatchingTimer) {
+        clearInterval(nowWatchingTimer);
+        nowWatchingTimer = null;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Connection Status
+// ---------------------------------------------------------------------------
+
+async function checkConnection() {
+    const badge = document.getElementById("connectionBadge");
+    if (!badge) return;
+
+    try {
+        await API.health();
+        badge.innerHTML = `<span class="conn-dot connected"></span><span class="conn-text">Connected</span>`;
+    } catch (_) {
+        badge.innerHTML = `<span class="conn-dot disconnected"></span><span class="conn-text">Disconnected</span>`;
+    }
+}
+
+// ===========================================================================
+// Register Routes & Start
+// ===========================================================================
+
+Router.register("dashboard", renderDashboard);
+Router.register("shows", renderShows);
+Router.register("show", renderShowDetail);
+Router.register("unresolved", renderUnresolved);
+Router.register("settings", renderSettings);
+
+// Listen for hash changes
+window.addEventListener("hashchange", () => {
+    stopNowWatchingRefresh();
+    Router.resolve();
+    if ((window.location.hash || "#dashboard") === "#dashboard") {
+        startNowWatchingRefresh();
+    }
+});
+
+// Initial load
+document.addEventListener("DOMContentLoaded", () => {
+    Router.resolve();
+    checkConnection();
+    setInterval(checkConnection, 30000);
+
+    if (!window.location.hash || window.location.hash === "#dashboard") {
+        startNowWatchingRefresh();
+    }
+});

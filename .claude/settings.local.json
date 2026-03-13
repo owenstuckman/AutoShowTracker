@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /mnt/c/Users/ostuc/Documents/GitHub/AutoShowTracker/tests -type f -not -path '*/__pycache__/*' 2>/dev/null | sort)"
+    ]
+  }
+}

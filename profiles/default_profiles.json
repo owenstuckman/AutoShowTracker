@@ -1,0 +1,92 @@
+{
+  "profiles": [
+    {
+      "app_name": "vlc",
+      "match_app_names": ["vlc.exe", "vlc", "VLC media player"],
+      "regions": [
+        {
+          "name": "title_bar",
+          "description": "VLC window title bar showing media name",
+          "x_pct": 0,
+          "y_pct": 0,
+          "w_pct": 100,
+          "h_pct": 5
+        },
+        {
+          "name": "bottom_overlay",
+          "description": "VLC bottom control bar area where filename may appear",
+          "x_pct": 0,
+          "y_pct": 90,
+          "w_pct": 100,
+          "h_pct": 10
+        }
+      ]
+    },
+    {
+      "app_name": "mpv",
+      "match_app_names": ["mpv.exe", "mpv"],
+      "regions": [
+        {
+          "name": "title_bar",
+          "description": "mpv on-screen display title at the top",
+          "x_pct": 0,
+          "y_pct": 0,
+          "w_pct": 100,
+          "h_pct": 8
+        },
+        {
+          "name": "osd_bottom",
+          "description": "mpv OSD area at the bottom of the window",
+          "x_pct": 0,
+          "y_pct": 88,
+          "w_pct": 100,
+          "h_pct": 12
+        }
+      ]
+    },
+    {
+      "app_name": "plex",
+      "match_app_names": ["plex.exe", "Plex", "Plex HTPC", "Plex HTPC.exe", "plex htpc"],
+      "regions": [
+        {
+          "name": "top_bar",
+          "description": "Plex top navigation showing show/episode title",
+          "x_pct": 10,
+          "y_pct": 0,
+          "w_pct": 80,
+          "h_pct": 10
+        },
+        {
+          "name": "bottom_info",
+          "description": "Plex bottom overlay with episode information",
+          "x_pct": 5,
+          "y_pct": 82,
+          "w_pct": 90,
+          "h_pct": 15
+        }
+      ]
+    },
+    {
+      "app_name": "mpc-hc",
+      "match_app_names": ["mpc-hc.exe", "mpc-hc64.exe", "MPC-HC", "Media Player Classic"],
+      "regions": [
+        {
+          "name": "title_bar",
+          "description": "MPC-HC title bar with media filename",
+          "x_pct": 0,
+          "y_pct": 0,
+          "w_pct": 100,
+          "h_pct": 5
+        },
+        {
+          "name": "status_bar",
+          "description": "MPC-HC status bar at the bottom",
+          "x_pct": 0,
+          "y_pct": 94,
+          "w_pct": 100,
+          "h_pct": 6
+        }
+      ]
+    }
+  ]
+}

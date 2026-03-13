@@ -1,0 +1,10 @@
+{
+  "activitywatch_port": 5600,
+  "media_service_port": 7600,
+  "auto_log_threshold": 0.9,
+  "review_threshold": 0.7,
+  "ocr_enabled": true,
+  "heartbeat_interval": 30,
+  "grace_period": 120,
+  "polling_interval": 10
+}
