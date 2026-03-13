@@ -281,14 +281,15 @@ def init_db(ctx: click.Context, force: bool) -> None:
     settings.ensure_directories()
 
     async def _init() -> None:
-        # Lazy import keeps startup fast.
-        from show_tracker.database import init_databases  # type: ignore[import-not-found]
+        from show_tracker.storage.database import DatabaseManager
 
         click.echo(f"Data directory: {settings.data_dir}")
-        await init_databases(settings, force=force)
+        db = DatabaseManager(data_dir=settings.data_dir)
+        db.init_databases()
         click.echo("Databases initialised successfully.")
-        click.echo(f"  watch_history : {settings.watch_history_db}")
-        click.echo(f"  media_cache   : {settings.media_cache_db}")
+        click.echo(f"  watch_history : {db.watch_db_path}")
+        click.echo(f"  media_cache   : {db.cache_db_path}")
+        db.close()
 
     _run_async(_init())
 

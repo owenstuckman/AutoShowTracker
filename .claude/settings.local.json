@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find /mnt/c/Users/ostuc/Documents/GitHub/AutoShowTracker/tests -type f -not -path '*/__pycache__/*' 2>/dev/null | sort)"
+      "Bash(find /mnt/c/Users/ostuc/Documents/GitHub/AutoShowTracker/tests -type f -not -path '*/__pycache__/*' 2>/dev/null | sort)",
+      "Bash(.venv/bin/python -m pytest tests/integration/test_identification_pipeline.py -v --tb=short 2>&1 | tail -80)",
+      "Bash(.venv/bin/python -m pytest tests/integration/test_identification_pipeline.py -v --tb=short -x 2>&1 | tail -120)",
+      "Bash(.venv/bin/python -m pytest tests/unit/ -v --tb=short 2>&1 | tail -60)",
+      "Bash(.venv/bin/python -m pytest tests/ -v --tb=short 2>&1 | tail -20)",
+      "Bash(.venv/bin/python -m pytest tests/integration/test_identification_pipeline.py -v --tb=long -k \"url_slug:breaking-bad\" 2>&1 | tail -30)",
+      "Bash(.venv/bin/python -c \"\nfrom show_tracker.identification.parser import parse_media_string\nfor inp, src in [\n    \\('L&O SVU 3x07 Sacrifice', 'youtube'\\),\n    \\('HIMYM S04E01 Do I Know You', 'filename'\\),\n    \\('IASIP S16E01', 'filename'\\),\n    \\('TBBT S12E24 The Stockholm Syndrome', 'filename'\\),\n]:\n    r = parse_media_string\\(inp, src\\)\n    print\\(f'{inp!r:50s} -> title={r.title!r}, S{r.season}E{r.episode}'\\)\n\")"
     ]
   }
 }
