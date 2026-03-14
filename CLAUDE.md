@@ -66,12 +66,15 @@ Settings load from: env vars (prefix `ST_`) > `.env` file > `config/default_sett
 
 ## Document Index
 
-Design docs 00-09 in repo root. Key references:
-- Detection priority chain (six levels): `03_MEDIA_DETECTION.md`
-- Identification pipeline (guessit + TMDb fuzzy matching + confidence scoring): `04_CONTENT_IDENTIFICATION.md`
-- Full SQLite schema: `07_DATA_MODEL.md`
-- Implementation decisions: `docs/ARCHITECTURE_DECISIONS.md`
-- Setup guide: `docs/SETUP_AND_USAGE.md`
+Design docs 00-09 in `docs/design/`. Key references:
+- Detection priority chain (six levels): `docs/design/03_MEDIA_DETECTION.md`
+- Identification pipeline (guessit + TMDb fuzzy matching + confidence scoring): `docs/design/04_CONTENT_IDENTIFICATION.md`
+- Full SQLite schema: `docs/design/07_DATA_MODEL.md`
+- Architecture deep-dive: `docs/ARCHITECTURE.md`
+- Implementation decisions (D001-D013): `docs/DECISIONS.md`
+- Setup guide: `docs/SETUP.md`
+- API reference: `docs/API_REFERENCE.md`
+- Project status and TODO: `docs/TODO.md`
 
 ## Key Dependencies
 
