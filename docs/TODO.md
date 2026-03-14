@@ -1,184 +1,102 @@
 # Project Status and TODO
 
-## Completed
+## What Is Done
 
-### Phase 0: Identification Pipeline
+All five architectural layers are implemented with working code, tests, and documentation.
 
-- [x] **Parser** (`identification/parser.py`): guessit-based extraction of show name, season, episode, year, quality from raw strings
-- [x] **URL Patterns** (`identification/url_patterns.py`): Pattern matching for Netflix, Hulu, Disney+, HBO Max, Amazon Prime Video, YouTube, Crunchyroll, Peacock, Paramount+, Apple TV+, and more
-- [x] **TMDb Client** (`identification/tmdb_client.py`): Async httpx client for TMDb v3 API (search shows, get show details, get episode details)
-- [x] **Resolver** (`identification/resolver.py`): Full resolution chain (URL match, parse, alias lookup, cache check, TMDb fuzzy search, episode fetch)
-- [x] **Confidence Scoring** (`identification/confidence.py`): Composite scoring with source reliability bases, bonuses, and penalties
-- [x] **Test Dataset**: 100+ test cases for identification pipeline validation (`tests/data/identification_dataset.json`)
+### Phase 0: Identification Pipeline (Complete)
+- Parser with guessit integration and preprocessing for browser titles, filenames, SMTC metadata
+- URL pattern matching for Netflix, YouTube, Crunchyroll, Plex, Disney+, Hulu, Amazon Prime, HBO Max, and generic pirate sites
+- TMDb API client (httpx-based) with search, show detail, episode detail, find-by-external-id
+- Episode resolver with alias lookup, cache, fuzzy matching (rapidfuzz, 0.80 threshold), confidence scoring
+- 249 passing tests (52 unit + 197 integration across 100+ real-world inputs)
+- CLI: `show-tracker identify "filename.mkv"`
 
-### Phase 1A: ActivityWatch Integration
+### Phase 1: Windows Desktop MVP (Complete)
+- **ActivityWatch integration**: REST client, event poller, bucket discovery, process manager with crash recovery, mock client for testing
+- **SMTC listener**: Windows media session detection via winsdk WinRT bindings (event-driven)
+- **MPRIS listener**: Linux D-Bus media session detection via dbus-next (event-driven)
+- **Detection service**: Central orchestrator merging AW + SMTC/MPRIS + browser signals, deduplication, grace period, confidence routing
+- **Browser extension**: Chrome Manifest V3 with content script (schema.org, Open Graph, video element monitoring, heartbeats), background service worker, popup UI
+- **FastAPI API**: All endpoints for media events, watch history, show detail, episode grid, stats, unresolved queue, settings, aliases
+- **Web UI**: Vanilla JS SPA with dashboard, shows grid, show detail with season tabs, unresolved resolution workflow, settings page
+- **Storage**: Dual SQLite databases (watch_history.db + media_cache.db), SQLAlchemy ORM, repository pattern with heartbeat merging
+- **CLI**: `show-tracker run`, `show-tracker init-db`, `show-tracker identify`, `show-tracker test-pipeline`
 
-- [x] **ActivityWatch Client** (`detection/activitywatch.py`): REST client for aw-server-rust
-- [x] **Event Poller**: Polling loop with bucket discovery for `aw-watcher-window` and `aw-watcher-web`
-- [x] **Mock Client**: `MockActivityWatchClient` for testing without a running AW server
+### Phase 2: Robust Detection (Complete)
+- **VLC IPC**: HTTP interface client for VLC's web API (status, title, duration, position)
+- **mpv IPC**: JSON IPC socket/pipe client (media-title, duration, position, path)
+- **File handle inspection**: Cross-platform open file detection via psutil
+- **Player service**: Orchestrator that tries native IPC then falls back to file handles
+- **OCR subsystem**: Screenshot capture, per-app region cropping from JSON profiles, Tesseract + EasyOCR engines, preprocessing pipeline, orchestrator service
+- **Browser event handler**: Priority chain (schema.org > Open Graph > URL pattern > page title)
 
-### Phase 1A: OS Media Session Listeners
-
-- [x] **SMTC Listener** (`detection/smtc_listener.py`): Windows System Media Transport Controls via `winsdk`
-- [x] **MPRIS Listener** (`detection/mpris_listener.py`): Linux MPRIS D-Bus integration via `dbus-next`
-- [x] **Media Session Abstraction** (`detection/media_session.py`): `MediaSessionListener` protocol, `PlaybackStatus` enum, `get_media_listener()` factory
-
-### Phase 1B: Browser Extension
-
-- [x] **Chrome Manifest V3** extension (`browser_extension/chrome/`)
-- [x] **Content Script** (`content.js`): Video element detection, URL pattern matching, JSON-LD/OG metadata extraction, heartbeat emission
-- [x] **Background Service Worker** (`background.js`): Event enrichment, forwarding to local API, connection status tracking
-- [x] **Popup UI** (`popup.html/js/css`): Status display, tracking enable/disable toggle
-
-### Phase 1C: Web UI and API
-
-- [x] **FastAPI Application** (`api/app.py`): ASGI app with CORS, lifespan management, static file serving
-- [x] **Media Event Routes** (`api/routes_media.py`): `POST /api/media-event`, `GET /api/currently-watching`
-- [x] **History Routes** (`api/routes_history.py`): Recent episodes, show list, show detail, episode progress, next-to-watch, statistics
-- [x] **Unresolved Routes** (`api/routes_unresolved.py`): List, resolve, dismiss, TMDb search
-- [x] **Settings Routes** (`api/routes_settings.py`): Get/update settings, CRUD for aliases
-- [x] **API Schemas** (`api/schemas.py`): Pydantic request/response models for all endpoints
-- [x] **SPA Frontend** (`web_ui/`): Dashboard, shows grid, show detail with episode grid, unresolved queue, settings page
-- [x] **Hash-Based Routing**: Client-side navigation (`#/dashboard`, `#/shows`, `#/shows/{id}`, `#/unresolved`, `#/settings`)
-
-### Phase 2A: Player IPC
-
-- [x] **VLC Web Interface** (`players/vlc.py`): HTTP client for VLC's Lua web interface, reads currently playing file and metadata
-- [x] **mpv JSON IPC** (`players/mpv.py`): Unix socket / Windows named pipe client for mpv's JSON IPC protocol
-
-### Phase 2B: OCR Subsystem
-
-- [x] **Screenshot Capture** (`ocr/screenshot.py`): Cross-platform screenshot capture using Pillow/PIL
-- [x] **Region Cropping** (`ocr/region_crop.py`): Crop title/overlay regions from player screenshots based on OCR profiles
-- [x] **Tesseract Engine** (`ocr/engine.py`): pytesseract wrapper with preprocessing
-- [x] **EasyOCR Engine** (`ocr/engine.py`): EasyOCR wrapper with lazy model loading
-- [x] **OCR Service** (`ocr/ocr_service.py`): Orchestrator with Tesseract-first, EasyOCR-fallback strategy
-
-### Storage Layer
-
-- [x] **SQLAlchemy Models** (`storage/models.py`): Show, Episode, WatchEvent, YouTubeWatch, ShowAlias, UnresolvedEvent, UserSetting, TMDbShowCache, TMDbSearchCache, TMDbEpisodeCache, FailedLookup
-- [x] **Database Manager** (`storage/database.py`): Dual-database management with WAL mode, foreign keys, transactional session scopes
-- [x] **Repository** (`storage/repository.py`): Higher-level data operations with heartbeat merging pattern
-
-### Configuration and CLI
-
-- [x] **Pydantic Settings** (`config.py`): Typed configuration with env var loading, `.env` support, validation
-- [x] **CLI Entry Points** (`main.py`): `show-tracker run`, `show-tracker identify`, `show-tracker test-pipeline`, `show-tracker init-db`
-- [x] **Default OCR Profiles** (`profiles/default_profiles.json`): Pre-configured crop regions for common player layouts
-- [x] **Default Alias Seed Data** (`utils/aliases.py`): Common show abbreviations and alternate names
-
-### Testing
-
-- [x] **Unit Tests**: `test_parser.py` (parser edge cases), `test_url_patterns.py` (URL matching for all supported platforms)
-- [x] **Integration Tests**: `test_identification_pipeline.py` (end-to-end identification with 100+ test cases)
+### Configuration & Utilities (Complete)
+- Pydantic-settings config with env vars, .env file, JSON defaults
+- 50+ initial show alias seed data
+- Default OCR region profiles for VLC, mpv, Plex, MPC-HC, Kodi
+- Structured logging with file rotation
 
 ---
 
-## Remaining / TODO
+## What Is Left To Do
 
-### Phase 0 Remaining: Identification Tuning
+### Immediate (Before First Real Use)
 
-- [ ] **Real TMDb API validation**: Get a TMDb API key and validate the full pipeline against the live API (currently tested with mock responses)
-- [ ] **Confidence threshold tuning**: Analyze real-world identification results to fine-tune `auto_log_threshold` (0.9) and `review_threshold` (0.7)
-- [ ] **Alias table expansion**: Add more common abbreviations, international titles, and alternate names based on real usage patterns
-- [ ] **Failed lookup analysis**: Review `failed_lookups` table after real usage to identify patterns that need new parsing rules
+- [ ] **Get a TMDb API key and validate end-to-end**: The full resolver → TMDb → episode fetch pipeline has not been tested against the live TMDb API. Get a key, set `TMDB_API_KEY` in `.env`, and run `show-tracker identify` on real inputs
+- [ ] **Test SMTC listener on Windows**: The SMTC listener code is written but needs to be tested on a real Windows machine with media players running
+- [ ] **Test MPRIS listener on Linux**: Same — needs testing with a real D-Bus session and media player
+- [ ] **Test browser extension in Chrome**: Load the unpacked extension from `browser_extension/chrome/` and verify it detects playback on Netflix, YouTube, and a pirate site
+- [ ] **Confidence threshold tuning**: Run the system for a few days and analyze whether 0.9/0.7 thresholds produce the right auto-log vs review split
 
-### Phase 1D: Windows Installer and Packaging
+### Phase 1D: Packaging (Not Started)
 
-- [ ] **PyInstaller bundling**: Create a single-file or single-directory Windows executable
-- [ ] **NSIS or Inno Setup installer**: Windows installer with Start Menu shortcuts and uninstall support
-- [ ] **System tray icon**: Background operation via tray icon (start/stop tracking, open web UI, view status)
-- [ ] **Auto-start on login**: Optional Windows registry entry or Startup folder shortcut
-- [ ] **First-run wizard**: Guide users through TMDb API key setup and ActivityWatch installation
+- [ ] PyInstaller or cx_Freeze bundling into a single executable
+- [ ] Windows installer (Inno Setup or NSIS) with Start Menu shortcuts
+- [ ] System tray icon via `pystray` (start/stop, open UI, status indicator)
+- [ ] Auto-start on Windows login (optional, registry or Startup folder)
+- [ ] Bundle ActivityWatch binaries alongside the installer
+- [ ] First-run wizard for TMDb API key setup
 
-### Phase 2C: Full-Window OCR with Spatial Filtering
+### Phase 2 Gaps
 
-- [ ] **Real-world OCR testing**: Test screenshot capture and OCR on actual player windows (VLC, mpv, browser fullscreen)
-- [ ] **Spatial filtering**: Filter OCR results by position to ignore subtitles and UI chrome, focusing on title overlays
-- [ ] **OCR profile tuning**: Refine crop regions in `default_profiles.json` based on real screenshots from different players and resolutions
-- [ ] **Confidence calibration**: Tune OCR confidence penalties with real OCR output data
-- [ ] **Performance optimization**: Profile OCR pipeline latency and optimize preprocessing steps
+- [ ] **Full-window OCR spatial filtering**: When no app profile exists, run full-window OCR and filter by position (top/bottom 15%) and font size
+- [ ] **OCR profile tuning**: Test crop regions in `profiles/default_profiles.json` against real screenshots at various resolutions and themes
+- [ ] **TVDb fallback**: Integrate TVDb API for anime with absolute episode numbering
+- [ ] **YouTube Data API**: Use video ID to fetch playlist/series info and detect YouTube original series
+- [ ] **Movie support**: Extend pipeline to identify movies (currently TV-episode only)
 
-### Phase 2D: Improved Identification
+### Phase 3: Cross-Platform (Partially Done)
 
-- [ ] **TVDb fallback for anime**: Integrate TVDb API as a secondary lookup for anime titles that TMDb handles poorly
-- [ ] **YouTube Data API integration**: Use the YouTube Data API v3 to detect series/playlists and map them to shows
-- [ ] **Expanded alias table**: Automated alias generation from TMDb alternative titles API endpoint
-- [ ] **Multi-language title support**: Handle shows known by different names in different regions
-- [ ] **Movie support**: Extend the pipeline to identify movies (currently TV-only)
+- [ ] **macOS MediaRemote listener**: Implement via pyobjc or Swift helper binary
+- [ ] **macOS screenshot capture**: CGWindowListCreateImage for OCR
+- [ ] **macOS packaging**: DMG installer, code signing, notarization
+- [ ] **Linux packaging**: AppImage, possibly Flatpak
+- [ ] **Linux systemd service file**: For running as a background daemon
 
-### Phase 3A: Linux Packaging
+### Phase 4: Polish & Advanced Features (Not Started)
 
-- [ ] **AppImage**: Create a self-contained AppImage for easy Linux distribution
-- [ ] **MPRIS end-to-end testing**: Test the MPRIS listener with real D-Bus sessions across multiple desktop environments (GNOME, KDE, Sway)
-- [ ] **systemd user service**: Provide a `.service` file for running Show Tracker as a background service
-- [ ] **Flatpak / Snap**: Evaluate containerized Linux packaging options
+- [ ] **Watch time analytics**: Daily/weekly/monthly charts, binge detection, viewing patterns
+- [ ] **Export**: JSON and CSV export of watch history
+- [ ] **Import**: Trakt.tv and Simkl import
+- [ ] **Sync**: Optional Trakt.tv two-way sync
+- [ ] **New episode notifications**: Check TMDb air dates, desktop notifications via plyer
+- [ ] **Plex/Jellyfin/Emby webhooks**: Direct webhook integration (highest accuracy, lowest effort)
+- [ ] **Android**: ActivityWatch Android integration, REST API sync
+- [ ] **Database migrations**: Alembic setup for schema evolution
 
-### Phase 3B: macOS Support
+### Testing Gaps
 
-- [ ] **MediaRemote listener**: Implement media session detection via `pyobjc` (NSMediaRemote framework) or a Swift helper binary
-- [ ] **CGWindowListCreateImage**: Screenshot capture for OCR on macOS
-- [ ] **DMG packaging**: Create a macOS disk image for distribution
-- [ ] **Launchd agent**: Background service management via launchd
-- [ ] **Code signing**: Sign the application for Gatekeeper compatibility
-
-### Phase 4A: Statistics and Insights
-
-- [ ] **Watch time analytics**: Daily, weekly, monthly watch time charts
-- [ ] **Binge detection**: Identify binge-watching sessions (3+ consecutive episodes)
-- [ ] **Viewing patterns**: Time-of-day and day-of-week analysis
-- [ ] **Completion tracking**: Percentage completion per show with progress bars
-- [ ] **Year-in-review**: Annual summary of watching habits
-
-### Phase 4B: Sync and Backup
-
-- [ ] **JSON export**: Export full watch history as structured JSON
-- [ ] **CSV export**: Export watch history as CSV for spreadsheet analysis
-- [ ] **Trakt.tv import**: Import existing watch history from Trakt
-- [ ] **Trakt.tv sync**: Two-way sync with Trakt.tv for cloud backup and social features
-- [ ] **Simkl import/sync**: Integration with Simkl tracking service
-- [ ] **Database backup**: Scheduled automatic backup of `watch_history.db`
-
-### Phase 4C: Notifications
-
-- [ ] **New episode alerts**: Check TMDb air dates and notify when tracked shows have new episodes
-- [ ] **Desktop notifications**: System notifications via `plyer` or native APIs
-- [ ] **Unwatched episode reminders**: Periodic reminders for shows with unwatched episodes
-
-### Phase 4D: Android Support
-
-- [ ] **ActivityWatch Android**: Integrate with the ActivityWatch Android app for mobile tracking
-- [ ] **REST API sync**: Mobile clients could sync with the desktop database via the HTTP API
-
-### Phase 4E: Media Server Webhooks
-
-- [ ] **Plex webhooks**: Receive playback events from Plex Media Server
-- [ ] **Jellyfin webhooks**: Receive playback events from Jellyfin
-- [ ] **Emby webhooks**: Receive playback events from Emby
-
-### Testing
-
-- [ ] **End-to-end tests with ActivityWatch**: Integration tests against a real or emulated AW server
-- [ ] **Browser extension testing**: Automated tests for content script metadata extraction
-- [ ] **OCR accuracy benchmarks**: Test OCR pipeline on a corpus of real player screenshots
-- [ ] **Cross-platform CI**: GitHub Actions matrix for Windows, Linux, and macOS
-- [ ] **Load testing**: Verify API performance under sustained event throughput
-- [ ] **Database migration tests**: Ensure schema changes work with Alembic migrations
-
-### Polish
-
-- [ ] **Error handling audit**: Review all `except Exception` blocks for proper error recovery and logging
-- [ ] **Logging completeness**: Ensure all significant operations produce structured log output
-- [ ] **Performance profiling**: Profile the identification pipeline and API response times under load
-- [ ] **Privacy policy document**: Document what data is collected, stored, and transmitted
-- [ ] **Rate limiting**: Add rate limiting to the TMDb client to respect API quotas
-- [ ] **Graceful degradation**: Ensure the app functions (with reduced features) when TMDb is unreachable
+- [ ] End-to-end tests with a real or emulated ActivityWatch server
+- [ ] Browser extension automated testing
+- [ ] OCR accuracy benchmarks on real player screenshots
+- [ ] Cross-platform CI (GitHub Actions: Windows + Linux + macOS)
+- [ ] API load testing
 
 ### Distribution
 
-- [ ] **Chrome Web Store submission**: Package and submit the Chrome extension
-- [ ] **Firefox Add-ons submission**: Port the extension to Firefox WebExtensions API and submit
-- [ ] **Firefox browser extension**: Port from Chrome Manifest V3 to Firefox-compatible format
-- [ ] **PyPI publication**: Publish the Python package to PyPI for `pip install show-tracker`
-- [ ] **THIRD_PARTY_LICENSES.txt**: Generate a comprehensive third-party license file for all dependencies
-- [ ] **System tray integration**: Implement tray icon using `pystray` or platform-native APIs
+- [ ] Chrome Web Store submission (requires privacy policy for `<all_urls>`)
+- [ ] Firefox extension port and Add-ons submission
+- [ ] PyPI publication (`pip install show-tracker`)
+- [ ] `THIRD_PARTY_LICENSES.txt` generation
+- [ ] Privacy policy document
