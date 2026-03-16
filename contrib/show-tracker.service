@@ -1,0 +1,30 @@
+# AutoShowTracker systemd user service
+#
+# Installation:
+#   cp contrib/show-tracker.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now show-tracker
+#
+# Logs:
+#   journalctl --user -u show-tracker -f
+#
+# Adjust ExecStart path to match your installation.
+
+[Unit]
+Description=AutoShowTracker - Automatic TV Show Tracking
+After=network.target graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/show-tracker/venv/bin/show-tracker run
+Restart=on-failure
+RestartSec=5
+
+# Environment — set your TMDb API key here or in ~/.config/show-tracker/.env
+Environment=TMDB_API_KEY=your_key_here
+# Environment=ST_DATA_DIR=%h/.show-tracker
+# Environment=ST_MEDIA_SERVICE_PORT=7600
+
+[Install]
+WantedBy=default.target

@@ -12,6 +12,7 @@ The AutoShowTracker HTTP API runs on `http://127.0.0.1:7600` by default. All end
 - [Unresolved Events](#unresolved-events)
 - [Settings](#settings)
 - [Aliases](#aliases)
+- [Export](#export)
 - [Browser Extension Event Schema](#browser-extension-event-schema)
 
 ---
@@ -618,6 +619,74 @@ Remove a show alias.
   "detail": "Alias not found"
 }
 ```
+
+---
+
+## Export
+
+### GET /api/export/history.json
+
+Export all watch history as a JSON array.
+
+**Response** `200 OK`:
+
+```json
+[
+  {
+    "show_title": "Breaking Bad",
+    "season_number": 5,
+    "episode_number": 14,
+    "episode_title": "Ozymandias",
+    "started_at": "2026-03-12 20:30:00",
+    "duration_seconds": 2850,
+    "completed": true,
+    "source": "browser"
+  }
+]
+```
+
+---
+
+### GET /api/export/history.csv
+
+Export all watch history as a CSV file download.
+
+**Response** `200 OK` with `Content-Disposition: attachment; filename=watch_history.csv`:
+
+```
+show_title,season_number,episode_number,episode_title,started_at,duration_seconds,completed,source
+Breaking Bad,5,14,Ozymandias,2026-03-12 20:30:00,2850,True,browser
+```
+
+---
+
+### GET /api/export/shows.json
+
+Export all tracked shows as a JSON array.
+
+**Response** `200 OK`:
+
+```json
+[
+  {
+    "show_id": 1,
+    "title": "Breaking Bad",
+    "tmdb_id": 1396,
+    "status": "Ended",
+    "total_seasons": 5,
+    "first_air_date": "2008-01-20",
+    "poster_path": "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg"
+  }
+]
+```
+
+---
+
+### GET /api/export/shows.csv
+
+Export all tracked shows as a CSV file download.
+
+**Response** `200 OK` with `Content-Disposition: attachment; filename=shows.csv`.
 
 ---
 

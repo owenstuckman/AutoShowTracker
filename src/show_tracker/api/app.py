@@ -79,11 +79,13 @@ from show_tracker.api.routes_media import router as media_router  # noqa: E402
 from show_tracker.api.routes_history import router as history_router  # noqa: E402
 from show_tracker.api.routes_unresolved import router as unresolved_router  # noqa: E402
 from show_tracker.api.routes_settings import router as settings_router  # noqa: E402
+from show_tracker.api.routes_export import router as export_router  # noqa: E402
 
 app.include_router(media_router)
 app.include_router(history_router)
 app.include_router(unresolved_router)
 app.include_router(settings_router)
+app.include_router(export_router)
 
 
 # ---------------------------------------------------------------------------

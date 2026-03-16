@@ -71,7 +71,10 @@ Key settings: `TMDB_API_KEY` (required), `ST_DATA_DIR` (default: `~/.show-tracke
 | [Decisions](docs/DECISIONS.md) | Numbered implementation decision log (D001-D013) |
 | [API Reference](docs/API_REFERENCE.md) | Full HTTP API documentation |
 | [TODO](docs/TODO.md) | Project status and remaining work |
+| [Human TODO](docs/HUMAN_TODO.md) | Manual tasks requiring human action |
 | [Design Docs](docs/design/) | Original design specifications (00-09) |
+| [Privacy Policy](PRIVACY_POLICY.md) | Data collection and privacy details |
+| [Third-Party Licenses](THIRD_PARTY_LICENSES.txt) | Dependency license listing |
 
 ## Tests
 
