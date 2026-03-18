@@ -51,13 +51,13 @@ All five architectural layers are implemented with working code, tests, and docu
 
 ### Human-Required Tasks (see `docs/HUMAN_TODO.md` for step-by-step instructions)
 
-#### Critical Path (Before First Real Use)
-- [ ] **Set up Python environment** — create venv, install with platform extras, verify CLI
-- [ ] **Get a TMDb API key** — create account at themoviedb.org, request developer key, add to `.env`
-- [ ] **Initialize databases and validate pipeline** — run `show-tracker init-db`, test `show-tracker identify` with multiple inputs, verify TMDb resolution works end-to-end
-- [ ] **Start full service and verify web UI** — run `show-tracker run`, open dashboard, click through all pages, test `/api/health`
+#### Critical Path (COMPLETE)
+- [x] **Set up Python environment** — venv created, dependencies installed, CLI verified
+- [x] **Get a TMDb API key** — account created, key configured in `.env`
+- [x] **Initialize databases and validate pipeline** — databases created, `show-tracker identify` tested end-to-end with TMDb resolution
+- [x] **Start full service and verify web UI** — service starts, dashboard loads, API health check passes
 
-#### Detection Source Testing (test the ones you use)
+#### Detection Source Testing (IN PROGRESS — test the ones you use)
 - [ ] **Test SMTC listener on Windows** — start service, play media in VLC/browser, check logs for SMTC events, verify title/artist/playback status captured, test pause/resume
 - [ ] **Test MPRIS listener on Linux** — verify D-Bus running, start service, play media, check logs for MPRIS events, test with VLC/mpv/browser
 - [ ] **Test browser extension in Chrome** — load unpacked from `browser_extension/chrome/`, verify popup shows "Connected", test on Netflix/YouTube/Crunchyroll/Disney+/Hulu/Prime/HBO Max, verify heartbeats every 15s, verify pause/ended events

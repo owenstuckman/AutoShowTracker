@@ -51,12 +51,7 @@ All critical path tasks have been completed. The system is installed, TMDb key i
     TMDB_API_KEY=your_32_character_key_here
     ```
 
-
-
-DONE TO HERE 
-
-
-### 3. Initialize databases and validate the pipeline
+### ~~3. Initialize databases and validate the pipeline~~ DONE
 
 1. Initialize the databases:
    ```bash
@@ -91,7 +86,7 @@ DONE TO HERE
    - Can you reach `api.themoviedb.org` from your network?
    - Run with `--source manual` and check the JSON output for `confidence` values
 
-### 4. Start the full service and verify the web UI
+### ~~4. Start the full service and verify the web UI~~ DONE
 
 1. Start all services:
    ```bash
@@ -117,15 +112,7 @@ DONE TO HERE
 
 ---
 
-
-DONE DONE
-
----
-
-
-
-
-## Detection Source Testing
+## Detection Source Testing (NEXT UP)
 
 Test each detection source individually. You only need to test the ones relevant to your setup.
 
