@@ -49,59 +49,167 @@ All five architectural layers are implemented with working code, tests, and docu
 
 ## What Is Left To Do
 
-All remaining tasks require human action (hardware access, API keys, manual testing, or external accounts). See `docs/HUMAN_TODO.md` for a detailed checklist.
+### Human-Required Tasks (see `docs/HUMAN_TODO.md` for step-by-step instructions)
 
-### Immediate (Before First Real Use)
+#### Critical Path (Before First Real Use)
+- [ ] **Set up Python environment** — create venv, install with platform extras, verify CLI
+- [ ] **Get a TMDb API key** — create account at themoviedb.org, request developer key, add to `.env`
+- [ ] **Initialize databases and validate pipeline** — run `show-tracker init-db`, test `show-tracker identify` with multiple inputs, verify TMDb resolution works end-to-end
+- [ ] **Start full service and verify web UI** — run `show-tracker run`, open dashboard, click through all pages, test `/api/health`
 
-- [ ] **Get a TMDb API key and validate end-to-end** — requires creating a TMDb account
-- [ ] **Test SMTC listener on Windows** — requires a Windows machine with media players
-- [ ] **Test MPRIS listener on Linux** — requires a Linux desktop with D-Bus
-- [ ] **Test browser extension in Chrome** — requires manual loading and streaming site access
-- [ ] **Confidence threshold tuning** — requires running the system for several days
+#### Detection Source Testing (test the ones you use)
+- [ ] **Test SMTC listener on Windows** — start service, play media in VLC/browser, check logs for SMTC events, verify title/artist/playback status captured, test pause/resume
+- [ ] **Test MPRIS listener on Linux** — verify D-Bus running, start service, play media, check logs for MPRIS events, test with VLC/mpv/browser
+- [ ] **Test browser extension in Chrome** — load unpacked from `browser_extension/chrome/`, verify popup shows "Connected", test on Netflix/YouTube/Crunchyroll/Disney+/Hulu/Prime/HBO Max, verify heartbeats every 15s, verify pause/ended events
+- [ ] **Test VLC web interface** — enable web interface in VLC preferences, set Lua HTTP password, restart VLC, verify http://localhost:8080 works, play a file, check detection
+- [ ] **Test mpv IPC socket** — add `input-ipc-server` to mpv.conf, restart mpv, verify socket exists, play a file, check detection
 
-### Phase 1D: Packaging (Not Started)
+#### Post-Setup Tuning
+- [ ] **Tune confidence thresholds** — use system for 3-5 days, review unresolved queue, check for false positives in auto-logged items, adjust `ST_AUTO_LOG_THRESHOLD`/`ST_REVIEW_THRESHOLD` in `.env`
+- [ ] **Seed show aliases** — add abbreviations for shows you watch via `POST /api/aliases`
 
-- [ ] PyInstaller or cx_Freeze bundling into a single executable
-- [ ] Windows installer (Inno Setup or NSIS) with Start Menu shortcuts
-- [ ] System tray icon via `pystray` (start/stop, open UI, status indicator)
-- [ ] Auto-start on Windows login (optional, registry or Startup folder)
-- [ ] Bundle ActivityWatch binaries alongside the installer
-- [ ] First-run wizard for TMDb API key setup
+---
 
-### Phase 2 Gaps
+### Code Tasks (can be done by a developer or AI assistant)
 
-- [ ] **Full-window OCR spatial filtering**: When no app profile exists, run full-window OCR and filter by position (top/bottom 15%) and font size
-- [ ] **OCR profile tuning**: Test crop regions against real screenshots at various resolutions
-- [ ] **TVDb fallback**: Integrate TVDb API for anime with absolute episode numbering
-- [ ] **YouTube Data API**: Use video ID to fetch playlist/series info and detect YouTube original series
-- [ ] **Movie support**: Extend pipeline to identify movies (currently TV-episode only)
+#### Phase 1D: Packaging
 
-### Phase 3: Cross-Platform
+- [ ] **PyInstaller bundling**
+  - Create a PyInstaller spec file for `src/show_tracker/main.py`
+  - Bundle data files: `config/default_settings.json`, `profiles/default_profiles.json`, `web_ui/`, guessit data
+  - Add hidden imports for guessit, rebulk, SQLAlchemy SQLite dialect
+  - Test the built binary on a clean machine
+- [ ] **System tray icon via pystray**
+  - Add `pystray` and `Pillow` to dependencies
+  - Create `src/show_tracker/tray.py` with icon states (running/stopped/error)
+  - Menu items: "Open Dashboard" (webbrowser.open), "Start/Stop", "Quit"
+  - Integrate with `show-tracker run` command — launch tray alongside uvicorn
+  - Create a simple icon (16x16, 32x32, 64x64 PNGs or ICO)
+- [ ] **First-run wizard**
+  - On first startup (no databases exist), prompt user for TMDb API key
+  - Validate the key by making a test TMDb API call
+  - Write the key to `.env` or `user_settings` table
+  - Could be a terminal wizard (click prompts) or a web UI page
 
-- [ ] **macOS MediaRemote listener**: Implement via pyobjc or Swift helper binary
-- [ ] **macOS screenshot capture**: CGWindowListCreateImage for OCR
-- [ ] **macOS packaging**: DMG installer, code signing, notarization
-- [ ] **Linux packaging**: AppImage, possibly Flatpak
+#### Phase 2 Gaps
 
-### Phase 4: Polish & Advanced Features
+- [ ] **Full-window OCR spatial filtering**
+  - When no app profile exists in `profiles/default_profiles.json`, fall back to full-window OCR
+  - After OCR, filter results by position: keep only text in top 15% or bottom 15% of the window (where title overlays typically appear)
+  - Filter by estimated font size: discard very small text (subtitles) and keep larger text (titles)
+  - File to modify: `src/show_tracker/ocr/ocr_service.py`
+- [ ] **TVDb API client and fallback**
+  - Create `src/show_tracker/identification/tvdb_client.py` (similar pattern to `tmdb_client.py`)
+  - Add TVDb search + episode lookup methods
+  - In `resolver.py`, add fallback: if TMDb confidence < 0.6 AND parsed input has no season number AND episode number > 50, try TVDb (likely anime with absolute numbering)
+  - Map TVDb absolute episodes to season/episode format
+- [ ] **YouTube Data API integration**
+  - Extend `src/show_tracker/identification/tmdb_client.py` or create a separate YouTube client
+  - Use the video ID (already extracted by `url_patterns.py`) to fetch video snippet from YouTube API
+  - Check if video belongs to a playlist — if the playlist is a "series", extract series/episode info
+  - Requires `YOUTUBE_API_KEY` in `.env`
+- [ ] **Movie support**
+  - Currently the pipeline only identifies TV episodes. Extend to support movies:
+  - In `parser.py`: detect when guessit returns `type: "movie"` instead of `type: "episode"`
+  - In `resolver.py`: add `search_movie()` and `get_movie()` TMDb API calls
+  - In `models.py`: add a `Movie` model and `MovieWatch` event (or reuse `Show` with a `media_type` column)
+  - In the web UI: add a "Movies" tab alongside "Shows"
 
-- [ ] **Watch time analytics**: Daily/weekly/monthly charts, binge detection, viewing patterns
-- [ ] **Import**: Trakt.tv and Simkl import
-- [ ] **Sync**: Optional Trakt.tv two-way sync
-- [ ] **New episode notifications**: Check TMDb air dates, desktop notifications via plyer
-- [ ] **Plex/Jellyfin/Emby webhooks**: Direct webhook integration (highest accuracy, lowest effort)
-- [ ] **Android**: ActivityWatch Android integration, REST API sync
-- [ ] **Database migrations**: Alembic setup for schema evolution
+#### Phase 3: Cross-Platform
 
-### Testing Gaps
+- [ ] **macOS MediaRemote listener**
+  - Create `src/show_tracker/detection/macos_listener.py`
+  - Use `pyobjc-framework-MediaPlayer` to access `MPNowPlayingInfoCenter`
+  - Alternatively, create a small Swift helper binary that outputs JSON and communicate via subprocess
+  - Implement the `MediaSessionListener` Protocol (same interface as SMTC/MPRIS)
+- [ ] **macOS screenshot capture**
+  - In `src/show_tracker/ocr/screenshot.py`, add macOS support
+  - Use `Quartz.CGWindowListCreateImage` via `pyobjc-framework-Quartz`
+  - Alternative: use `screencapture` CLI tool via subprocess
+- [ ] **Linux AppImage packaging**
+  - Create an AppImage build script using `appimagetool`
+  - Bundle Python, all dependencies, and data files
+  - Test on Ubuntu, Fedora, and Arch
 
-- [ ] End-to-end tests with a real or emulated ActivityWatch server
-- [ ] Browser extension automated testing
-- [ ] OCR accuracy benchmarks on real player screenshots
-- [ ] API load testing
+#### Phase 4: Polish & Advanced Features
 
-### Distribution
+- [ ] **Watch time analytics**
+  - Add new API endpoints: `GET /api/stats/daily`, `GET /api/stats/weekly`, `GET /api/stats/monthly`
+  - Each returns time-series data: date/week/month, total watch time, episode count, top shows
+  - Add binge detection: flag sessions where 3+ episodes of the same show are watched consecutively
+  - In the web UI: add a "Stats" page with bar charts (can use Chart.js CDN, no build step needed)
+  - Add viewing pattern analysis: most common watch times, weekday vs weekend breakdown
+- [ ] **Trakt.tv import**
+  - Create `src/show_tracker/sync/trakt.py`
+  - Implement OAuth2 device flow (no redirect URI needed for local apps)
+  - Fetch user's watch history from Trakt API
+  - Map Trakt show/episode IDs to TMDb IDs (Trakt provides TMDb ID mappings)
+  - Insert into local database, skipping duplicates
+- [ ] **Trakt.tv two-way sync**
+  - After import works, add export: push local watch events to Trakt's scrobble API
+  - Add a sync timestamp to track what's been synced
+  - Handle conflicts: if the same episode has different watch times locally vs Trakt, keep the earlier one
+- [ ] **New episode notifications**
+  - Add `plyer` to dependencies (cross-platform desktop notifications)
+  - Create a background task that runs daily
+  - For each show the user is watching: check TMDb for upcoming air dates
+  - If an episode airs today or tomorrow, send a desktop notification
+  - Store last-notified date in `user_settings` to avoid duplicate notifications
+- [ ] **Plex/Jellyfin/Emby webhooks**
+  - Add `POST /api/webhooks/plex`, `POST /api/webhooks/jellyfin`, `POST /api/webhooks/emby`
+  - Parse each platform's webhook payload format (Plex sends JSON with library/metadata info)
+  - Extract show name, season, episode from the webhook data
+  - These are the highest-accuracy detection source — the media server knows exactly what's playing
+  - Plex webhooks require Plex Pass; Jellyfin webhooks are free
+- [ ] **Database migrations with Alembic**
+  - Install Alembic: add to dev dependencies
+  - Initialize: `alembic init alembic`
+  - Configure `alembic/env.py` to use both `WatchBase` and `CacheBase` metadata
+  - Generate initial migration: `alembic revision --autogenerate -m "initial"`
+  - Test: `alembic upgrade head` on a fresh database
+  - Document migration workflow in SETUP.md
 
-- [ ] Chrome Web Store submission (requires privacy policy URL + developer account)
-- [ ] Firefox extension port and Add-ons submission
-- [ ] PyPI publication (`pip install show-tracker`)
+#### Testing Gaps
+
+- [ ] **End-to-end tests with ActivityWatch**
+  - Create `tests/integration/test_activitywatch.py`
+  - Use `MockActivityWatchClient` (already exists in `activitywatch.py`) to simulate AW events
+  - Test the full flow: AW event → DetectionService → EpisodeResolver → WatchRepository
+  - Verify deduplication, heartbeat merging, and grace period finalization
+- [ ] **Browser extension automated testing**
+  - Use Puppeteer or Playwright to automate Chrome with the extension loaded
+  - Create test pages with `<video>` elements and structured metadata
+  - Verify the content script extracts metadata and sends events to the API
+  - Test the popup UI connection status
+- [ ] **OCR accuracy benchmarks**
+  - Collect screenshots from each supported player with known titles visible
+  - Create a test dataset: `tests/data/ocr_screenshots/` with ground-truth labels
+  - Write a benchmark script that runs OCR on each screenshot and compares to ground truth
+  - Report per-player, per-resolution accuracy
+- [ ] **API load testing**
+  - Use `locust` or `httpx` to simulate concurrent browser extension events
+  - Target: 10 concurrent "viewers" sending heartbeats every 15 seconds
+  - Measure response latency and database write throughput
+  - Verify no dropped events or database locks under load
+
+#### Distribution
+
+- [ ] **Chrome Web Store submission**
+  - Host PRIVACY_POLICY.md at a public URL
+  - Create developer account ($5 one-time fee)
+  - Create 128x128 extension icon
+  - Take store listing screenshots (1280x800)
+  - ZIP the `browser_extension/chrome/` directory
+  - Submit for review
+- [ ] **Firefox extension port**
+  - Copy Chrome extension to `browser_extension/firefox/`
+  - Modify `manifest.json`: change `service_worker` to `scripts` array for background
+  - Test in Firefox via `about:debugging` > "Load Temporary Add-on"
+  - Submit to https://addons.mozilla.org/developers/
+- [ ] **PyPI publication**
+  - Verify all `[project]` metadata in `pyproject.toml` (authors, license, classifiers, urls)
+  - Add `readme = "README.md"` to `[project]` if not already present
+  - Build: `python -m build`
+  - Upload to TestPyPI: `twine upload --repository testpypi dist/*`
+  - Test install from TestPyPI in a clean venv
+  - Upload to real PyPI: `twine upload dist/*`
