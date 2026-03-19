@@ -149,6 +149,35 @@ class TMDbClient:
         """
         return self._get(f"/tv/{tmdb_id}/season/{season}")
 
+    def search_movie(self, query: str, year: int | None = None) -> list[dict[str, Any]]:
+        """Search for movies by name.
+
+        Args:
+            query: Movie name to search for.
+            year: Optional release year to narrow results.
+
+        Returns:
+            List of movie result dicts from TMDb.
+        """
+        params: dict[str, Any] = {"query": query}
+        if year is not None:
+            params["year"] = year
+
+        data = self._get("/search/movie", params=params)
+        results: list[dict[str, Any]] = data.get("results", [])
+        return results
+
+    def get_movie(self, tmdb_id: int) -> dict[str, Any]:
+        """Get full details for a movie.
+
+        Args:
+            tmdb_id: TMDb movie ID.
+
+        Returns:
+            Movie details dict.
+        """
+        return self._get(f"/movie/{tmdb_id}")
+
     def find_by_external_id(
         self, external_id: str, source: str
     ) -> dict[str, Any]:

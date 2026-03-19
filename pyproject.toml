@@ -36,9 +36,14 @@ ocr = [
 ]
 windows = [
     "winsdk>=1.0",
+    "pystray>=0.19",
 ]
 linux = [
     "dbus-next>=0.2.3",
+    "pystray>=0.19",
+]
+notifications = [
+    "plyer>=2.1",
 ]
 dev = [
     "pytest>=8.0",
@@ -46,6 +51,7 @@ dev = [
     "pytest-cov>=4.1",
     "ruff>=0.3",
     "mypy>=1.8",
+    "alembic>=1.13",
 ]
 
 [project.scripts]

@@ -42,6 +42,20 @@ class IdentificationResult:
     match_method: str  # "exact_url", "guessit+tmdb_fuzzy", "alias_lookup", "cache_hit"
 
 
+@dataclass(frozen=True)
+class MovieIdentificationResult:
+    """Canonical identification of a detected movie."""
+
+    tmdb_movie_id: int | None
+    title: str
+    original_title: str | None
+    year: int | None
+    confidence: float
+    source: str
+    raw_input: str
+    match_method: str
+
+
 class AliasStore(Protocol):
     """Protocol for looking up show aliases."""
 
@@ -222,6 +236,118 @@ class EpisodeResolver:
 
         return self._resolve_with_show_id(
             tmdb_show_id, parsed, source_type, match_method, tmdb_match_score=raw_score
+        )
+
+    def resolve_movie(
+        self,
+        raw_string: str,
+        source_type: str,
+    ) -> MovieIdentificationResult:
+        """Resolve a raw string to a canonical movie identification.
+
+        Args:
+            raw_string: The raw detection string.
+            source_type: Detection source.
+
+        Returns:
+            A MovieIdentificationResult.
+        """
+        parsed = parse_media_string(raw_string, source_type)
+        title_query = parsed.title.strip()
+
+        if not title_query:
+            return MovieIdentificationResult(
+                tmdb_movie_id=None,
+                title=title_query,
+                original_title=None,
+                year=parsed.year,
+                confidence=0.0,
+                source=source_type,
+                raw_input=raw_string,
+                match_method="none",
+            )
+
+        # Search TMDb for movies
+        try:
+            results = self.tmdb.search_movie(title_query, year=parsed.year)
+        except TMDbError:
+            logger.exception("TMDb movie search failed for %r", title_query)
+            return MovieIdentificationResult(
+                tmdb_movie_id=None,
+                title=title_query,
+                original_title=None,
+                year=parsed.year,
+                confidence=0.0,
+                source=source_type,
+                raw_input=raw_string,
+                match_method="tmdb_search_failed",
+            )
+
+        if not results:
+            return MovieIdentificationResult(
+                tmdb_movie_id=None,
+                title=title_query,
+                original_title=None,
+                year=parsed.year,
+                confidence=0.0,
+                source=source_type,
+                raw_input=raw_string,
+                match_method="no_results",
+            )
+
+        # Fuzzy match
+        best_movie: dict[str, Any] | None = None
+        best_score = 0.0
+
+        for movie in results:
+            for name_field in (movie.get("title", ""), movie.get("original_title", "")):
+                if not name_field:
+                    continue
+                ratio = fuzz.ratio(title_query.lower(), name_field.lower()) / 100.0
+                popularity_boost = min(movie.get("popularity", 0) / 10000.0, 0.05)
+                adjusted = ratio + popularity_boost
+                if adjusted > best_score:
+                    best_score = adjusted
+                    best_movie = movie
+
+        if best_movie is None:
+            raw_score = 0.0
+        else:
+            raw_score = max(
+                fuzz.ratio(title_query.lower(), best_movie.get("title", "").lower()) / 100.0,
+                fuzz.ratio(title_query.lower(), best_movie.get("original_title", "").lower()) / 100.0,
+            )
+
+        if best_movie is None or raw_score < FUZZY_THRESHOLD:
+            return MovieIdentificationResult(
+                tmdb_movie_id=None,
+                title=title_query,
+                original_title=None,
+                year=parsed.year,
+                confidence=raw_score,
+                source=source_type,
+                raw_input=raw_string,
+                match_method="below_threshold",
+            )
+
+        # Extract year from release_date
+        release_date = best_movie.get("release_date", "")
+        year = None
+        if release_date and len(release_date) >= 4:
+            try:
+                year = int(release_date[:4])
+            except ValueError:
+                pass
+
+        return MovieIdentificationResult(
+            tmdb_movie_id=best_movie["id"],
+            title=best_movie.get("title", title_query),
+            original_title=best_movie.get("original_title"),
+            year=year,
+            confidence=raw_score,
+            source=source_type,
+            raw_input=raw_string,
+            match_method="guessit+tmdb_fuzzy",
         )
 
     # -- internal helpers --------------------------------------------------

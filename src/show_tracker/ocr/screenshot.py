@@ -47,11 +47,7 @@ def capture_window(hwnd_or_window_id: int, platform: str | None = None) -> Image
     elif plat.startswith("linux"):
         return _capture_linux(hwnd_or_window_id)
     elif plat == "darwin":
-        raise NotImplementedError(
-            "macOS screenshot capture is not yet implemented. "
-            "Contributions welcome -- screencapturekit or CGWindowListCreateImage "
-            "would be the appropriate API."
-        )
+        return _capture_macos(hwnd_or_window_id)
     else:
         raise NotImplementedError(f"Unsupported platform: {plat}")
 
@@ -214,3 +210,72 @@ def _capture_linux(window_id: int) -> Image.Image:
 
     img = Image.open(io.BytesIO(proc.stdout))
     return img.convert("RGB")
+
+
+# ---------------------------------------------------------------------------
+# macOS: screencapture CLI or Quartz CGWindowListCreateImage
+# ---------------------------------------------------------------------------
+
+def _capture_macos(window_id: int) -> Image.Image:
+    """Capture a window on macOS.
+
+    Tries pyobjc Quartz framework first (CGWindowListCreateImage),
+    then falls back to the screencapture CLI tool.
+    """
+    import io
+    import tempfile
+
+    # Try Quartz framework first
+    try:
+        import Quartz  # type: ignore[import-not-found]
+        import CoreGraphics  # type: ignore[import-not-found]
+
+        cg_image = Quartz.CGWindowListCreateImage(
+            Quartz.CGRectNull,
+            Quartz.kCGWindowListOptionIncludingWindow,
+            window_id,
+            Quartz.kCGWindowImageBoundsIgnoreFraming,
+        )
+
+        if cg_image is not None:
+            width = CoreGraphics.CGImageGetWidth(cg_image)
+            height = CoreGraphics.CGImageGetHeight(cg_image)
+            bytes_per_row = CoreGraphics.CGImageGetBytesPerRow(cg_image)
+
+            data_provider = CoreGraphics.CGImageGetDataProvider(cg_image)
+            data = CoreGraphics.CGDataProviderCopyData(data_provider)
+
+            img = Image.frombuffer("RGBA", (width, height), data, "raw", "BGRA", bytes_per_row, 1)
+            return img.convert("RGB")
+    except ImportError:
+        logger.debug("pyobjc-framework-Quartz not available, falling back to screencapture CLI")
+    except Exception:
+        logger.debug("Quartz capture failed, falling back to screencapture CLI", exc_info=True)
+
+    # Fallback: use macOS screencapture CLI
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        tmp_path = tmp.name
+
+    try:
+        proc = subprocess.run(
+            ["screencapture", "-l", str(window_id), "-o", "-x", tmp_path],
+            capture_output=True,
+            check=True,
+            timeout=10,
+        )
+        img = Image.open(tmp_path)
+        return img.convert("RGB")
+    except FileNotFoundError:
+        raise RuntimeError("screencapture command not found (expected on macOS)")
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(
+            f"screencapture failed for window {window_id}: {exc.stderr.decode()}"
+        ) from exc
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("screencapture timed out")
+    finally:
+        import os
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass

@@ -74,6 +74,19 @@ def run(ctx: click.Context, host: str, port: int | None) -> None:
         settings.media_service_port = port
     settings.ensure_directories()
 
+    # Check for first-run
+    from show_tracker.first_run import needs_first_run
+
+    if needs_first_run(settings.data_dir):
+        click.echo("First-time setup detected.")
+        if click.confirm("Would you like to run the setup wizard?", default=True):
+            from show_tracker.first_run import run_first_run_wizard
+
+            run_first_run_wizard(settings.data_dir)
+            # Reload settings after wizard writes .env
+            settings = load_settings()
+            ctx.obj["settings"] = settings
+
     async def _start() -> None:
         click.echo(f"Show Tracker v{__version__}")
         click.echo(f"  Data directory : {settings.data_dir}")
@@ -89,6 +102,17 @@ def run(ctx: click.Context, host: str, port: int | None) -> None:
                 fg="yellow",
                 err=True,
             )
+
+        # Start system tray icon (non-blocking)
+        tray = None
+        try:
+            from show_tracker.tray import TrayIcon
+
+            dashboard_url = f"http://{host}:{settings.media_service_port}/"
+            tray = TrayIcon(dashboard_url=dashboard_url)
+            tray.start()
+        except Exception:
+            pass  # pystray not available — continue without tray
 
         # Import here to avoid heavy imports when running lightweight commands.
         import uvicorn  # noqa: F811
@@ -107,6 +131,9 @@ def run(ctx: click.Context, host: str, port: int | None) -> None:
             await server.serve()
         except KeyboardInterrupt:
             click.echo("\nShutting down gracefully...")
+        finally:
+            if tray is not None:
+                tray.stop()
 
     _run_async(_start())
 
@@ -292,6 +319,25 @@ def init_db(ctx: click.Context, force: bool) -> None:
         db.close()
 
     _run_async(_init())
+
+
+# ---------------------------------------------------------------------------
+# setup -- first-run wizard (can be run manually)
+# ---------------------------------------------------------------------------
+
+@cli.command()
+@click.pass_context
+def setup(ctx: click.Context) -> None:
+    """Run the first-time setup wizard.
+
+    Prompts for a TMDb API key, validates it, and initialises databases.
+    Can be re-run at any time to reconfigure.
+    """
+    settings = ctx.obj["settings"]
+
+    from show_tracker.first_run import run_first_run_wizard
+
+    run_first_run_wizard(settings.data_dir)
 
 
 # ---------------------------------------------------------------------------

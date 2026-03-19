@@ -1,0 +1,32 @@
+{
+    "manifest_version": 2,
+    "name": "Show Tracker",
+    "version": "0.1.0",
+    "description": "Automatic episode tracking across all streaming sites",
+    "permissions": [
+        "activeTab",
+        "tabs",
+        "storage",
+        "<all_urls>"
+    ],
+    "background": {
+        "scripts": ["background.js"]
+    },
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["content.js"],
+            "run_at": "document_idle"
+        }
+    ],
+    "browser_action": {
+        "default_popup": "popup.html",
+        "default_icon": "icon.png"
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "show-tracker@autoshow-tracker",
+            "strict_min_version": "109.0"
+        }
+    }
+}

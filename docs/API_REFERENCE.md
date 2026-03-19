@@ -13,6 +13,8 @@ The AutoShowTracker HTTP API runs on `http://127.0.0.1:7600` by default. All end
 - [Settings](#settings)
 - [Aliases](#aliases)
 - [Export](#export)
+- [Webhooks](#webhooks)
+- [Analytics](#analytics)
 - [Browser Extension Event Schema](#browser-extension-event-schema)
 
 ---
@@ -687,6 +689,160 @@ Export all tracked shows as a JSON array.
 Export all tracked shows as a CSV file download.
 
 **Response** `200 OK` with `Content-Disposition: attachment; filename=shows.csv`.
+
+---
+
+## Webhooks
+
+### POST /api/webhooks/plex
+
+Receive a Plex webhook event. Plex sends webhooks as multipart form data with a JSON `payload` field.
+
+**Events**: `media.play`, `media.pause`, `media.resume`, `media.stop`, `media.scrobble`
+
+**Response** `200 OK`:
+
+```json
+{
+  "status": "ok",
+  "event": "media.play",
+  "title": "Breaking Bad"
+}
+```
+
+---
+
+### POST /api/webhooks/jellyfin
+
+Receive a Jellyfin webhook event (requires Jellyfin Webhook plugin).
+
+**Events**: `PlaybackStart`, `PlaybackStop`, `PlaybackProgress`
+
+**Response** `200 OK`:
+
+```json
+{
+  "status": "ok",
+  "event": "PlaybackStart",
+  "title": "Stranger Things"
+}
+```
+
+---
+
+### POST /api/webhooks/emby
+
+Receive an Emby webhook event.
+
+**Events**: `playback.start`, `playback.stop`, `playback.progress`
+
+**Response** `200 OK`:
+
+```json
+{
+  "status": "ok",
+  "event": "playback.start",
+  "title": "The Office"
+}
+```
+
+---
+
+## Analytics
+
+### GET /api/stats/daily
+
+Return per-day watch statistics. Default: last 30 days.
+
+**Query Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `days` | integer | 30 | Number of days (1-365) |
+
+**Response** `200 OK`:
+
+```json
+[
+  {
+    "date": "2026-03-18",
+    "total_seconds": 7200,
+    "episode_count": 3,
+    "top_show": "Breaking Bad"
+  }
+]
+```
+
+---
+
+### GET /api/stats/weekly
+
+Return per-week watch statistics. Default: last 12 weeks.
+
+**Query Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `weeks` | integer | 12 | Number of weeks (1-104) |
+
+---
+
+### GET /api/stats/monthly
+
+Return per-month watch statistics. Default: last 12 months.
+
+**Query Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `months` | integer | 12 | Number of months (1-60) |
+
+---
+
+### GET /api/stats/binge-sessions
+
+Detect binge sessions: 3+ episodes of the same show watched on the same day.
+
+**Query Parameters**:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `min_episodes` | integer | 3 | Minimum episodes to count as binge (2-20) |
+| `limit` | integer | 20 | Max results (1-100) |
+
+**Response** `200 OK`:
+
+```json
+[
+  {
+    "show_id": 1,
+    "show_title": "Breaking Bad",
+    "date": "2026-03-15",
+    "episode_count": 5,
+    "total_seconds": 14400,
+    "first_episode": "S01E01",
+    "last_episode": "S01E05"
+  }
+]
+```
+
+---
+
+### GET /api/stats/patterns
+
+Analyze viewing patterns: time-of-day distribution, day-of-week distribution, average session length.
+
+**Response** `200 OK`:
+
+```json
+{
+  "hour_distribution": [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 5, 4, 3, 2, 3, 5, 8, 12, 15, 10, 7, 3, 1],
+  "weekday_distribution": [12, 15, 10, 18, 20, 25, 22],
+  "avg_session_minutes": 42.5,
+  "most_active_hour": 19,
+  "most_active_day": "Saturday"
+}
+```
 
 ---
 

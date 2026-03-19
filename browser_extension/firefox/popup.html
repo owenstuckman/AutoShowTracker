@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Show Tracker</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <header class="popup-header">
+            <h1>Show Tracker</h1>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span class="status-text" id="statusText">Checking...</span>
+            </div>
+        </header>
+
+        <div class="popup-body">
+            <div class="toggle-row">
+                <label for="trackingToggle">Enable Tracking</label>
+                <label class="switch">
+                    <input type="checkbox" id="trackingToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="tracking-info" id="trackingInfo" style="display: none;">
+                <div class="info-label">Currently tracking:</div>
+                <div class="info-value" id="trackingTitle">—</div>
+            </div>
+        </div>
+
+        <footer class="popup-footer">
+            <a href="#" id="openAppLink" class="open-app-link">Open Dashboard</a>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -154,6 +154,31 @@ class YouTubeWatch(WatchBase):
     )
 
 
+class MovieWatch(WatchBase):
+    __tablename__ = "movie_watches"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tmdb_movie_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    original_title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    poster_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[str] = mapped_column(Text, nullable=False)
+    ended_at: Mapped[str | None] = mapped_column(Text, nullable=True)
+    duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    source_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    raw_input: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[str] = mapped_column(Text, default=_utcnow)
+
+    __table_args__ = (
+        Index("idx_movie_watches_tmdb", "tmdb_movie_id"),
+        Index("idx_movie_watches_time", "started_at"),
+    )
+
+
 class ShowAlias(WatchBase):
     __tablename__ = "show_aliases"
 
