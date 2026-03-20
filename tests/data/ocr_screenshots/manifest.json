@@ -1,0 +1,65 @@
+[
+    {
+        "file": "vlc_720p_01.png",
+        "player": "vlc",
+        "resolution": "720p",
+        "expected_title": "Breaking Bad S01E01 - Pilot",
+        "expected_show": "Breaking Bad",
+        "expected_season": 1,
+        "expected_episode": 1
+    },
+    {
+        "file": "vlc_1080p_01.png",
+        "player": "vlc",
+        "resolution": "1080p",
+        "expected_title": "The Office S03E16 - Business School",
+        "expected_show": "The Office",
+        "expected_season": 3,
+        "expected_episode": 16
+    },
+    {
+        "file": "mpv_720p_01.png",
+        "player": "mpv",
+        "resolution": "720p",
+        "expected_title": "Stranger Things S04E07",
+        "expected_show": "Stranger Things",
+        "expected_season": 4,
+        "expected_episode": 7
+    },
+    {
+        "file": "mpv_1080p_01.png",
+        "player": "mpv",
+        "resolution": "1080p",
+        "expected_title": "Attack on Titan S04E28 - The Dawn of Humanity",
+        "expected_show": "Attack on Titan",
+        "expected_season": 4,
+        "expected_episode": 28
+    },
+    {
+        "file": "mpc_720p_01.png",
+        "player": "mpc-hc",
+        "resolution": "720p",
+        "expected_title": "Game of Thrones S08E03 - The Long Night",
+        "expected_show": "Game of Thrones",
+        "expected_season": 8,
+        "expected_episode": 3
+    },
+    {
+        "file": "plex_1080p_01.png",
+        "player": "plex",
+        "resolution": "1080p",
+        "expected_title": "Succession S04E10 - With Open Eyes",
+        "expected_show": "Succession",
+        "expected_season": 4,
+        "expected_episode": 10
+    },
+    {
+        "file": "kodi_1080p_01.png",
+        "player": "kodi",
+        "resolution": "1080p",
+        "expected_title": "The Bear S02E06 - Fishes",
+        "expected_show": "The Bear",
+        "expected_season": 2,
+        "expected_episode": 6
+    }
+]

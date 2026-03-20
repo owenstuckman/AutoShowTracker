@@ -92,6 +92,23 @@ const API = {
         });
     },
 
+    // Stats (advanced analytics)
+    dailyStats(days = 30) {
+        return this._fetch(`/api/stats/daily?days=${days}`);
+    },
+    weeklyStats(weeks = 12) {
+        return this._fetch(`/api/stats/weekly?weeks=${weeks}`);
+    },
+    monthlyStats(months = 12) {
+        return this._fetch(`/api/stats/monthly?months=${months}`);
+    },
+    bingeSessions(minEpisodes = 3) {
+        return this._fetch(`/api/stats/binge-sessions?min_episodes=${minEpisodes}`);
+    },
+    viewingPatterns() {
+        return this._fetch("/api/stats/patterns");
+    },
+
     // Aliases
     addAlias(showId, alias) {
         return this._fetch("/api/aliases", {
@@ -704,6 +721,212 @@ async function renderSettings() {
 }
 
 // ---------------------------------------------------------------------------
+// Stats
+// ---------------------------------------------------------------------------
+
+async function renderStats() {
+    content().innerHTML = `
+        <div class="page-header">
+            <h1 class="page-title">Statistics</h1>
+            <p class="page-subtitle">Your watching patterns and trends</p>
+        </div>
+        <div class="stats-charts">
+            <div class="card">
+                <div class="card-header"><span class="card-title">Daily Watch Time (Last 30 Days)</span></div>
+                <div class="chart-container"><canvas id="dailyChart"></canvas></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">Weekly Watch Time</span></div>
+                <div class="chart-container"><canvas id="weeklyChart"></canvas></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">Viewing Patterns</span></div>
+                <div class="chart-container"><canvas id="patternsChart"></canvas></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">Binge Sessions</span></div>
+                <div id="bingeList"><div class="loading-state"><div class="spinner"></div></div></div>
+            </div>
+        </div>
+    `;
+
+    const [daily, weekly, patterns, binges] = await Promise.all([
+        API.dailyStats(30).catch(() => []),
+        API.weeklyStats(12).catch(() => []),
+        API.viewingPatterns().catch(() => null),
+        API.bingeSessions().catch(() => []),
+    ]);
+
+    // Daily chart
+    if (typeof Chart !== "undefined" && daily.length > 0) {
+        const reversed = [...daily].reverse();
+        new Chart(document.getElementById("dailyChart"), {
+            type: "bar",
+            data: {
+                labels: reversed.map((d) => d.date),
+                datasets: [{
+                    label: "Hours",
+                    data: reversed.map((d) => +(d.total_seconds / 3600).toFixed(1)),
+                    backgroundColor: "rgba(99, 102, 241, 0.7)",
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { maxTicksLimit: 10, color: "#999" }, grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { color: "#999" }, grid: { color: "rgba(255,255,255,0.05)" } },
+                },
+            },
+        });
+    }
+
+    // Weekly chart
+    if (typeof Chart !== "undefined" && weekly.length > 0) {
+        const reversed = [...weekly].reverse();
+        new Chart(document.getElementById("weeklyChart"), {
+            type: "bar",
+            data: {
+                labels: reversed.map((w) => w.week),
+                datasets: [{
+                    label: "Hours",
+                    data: reversed.map((w) => +(w.total_seconds / 3600).toFixed(1)),
+                    backgroundColor: "rgba(74, 222, 128, 0.7)",
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: "#999" }, grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { color: "#999" }, grid: { color: "rgba(255,255,255,0.05)" } },
+                },
+            },
+        });
+    }
+
+    // Patterns heatmap (hour of day)
+    if (typeof Chart !== "undefined" && patterns) {
+        const hours = patterns.hour_distribution || [];
+        new Chart(document.getElementById("patternsChart"), {
+            type: "bar",
+            data: {
+                labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+                datasets: [{
+                    label: "Episodes",
+                    data: hours,
+                    backgroundColor: hours.map((v) => {
+                        const intensity = Math.min(v / (Math.max(...hours) || 1), 1);
+                        return `rgba(99, 102, 241, ${0.2 + intensity * 0.8})`;
+                    }),
+                    borderRadius: 2,
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: `Most active: ${patterns.most_active_hour}:00 on ${patterns.most_active_day}s | Avg session: ${patterns.avg_session_minutes}m`,
+                        color: "#999",
+                        font: { size: 12 },
+                    },
+                },
+                scales: {
+                    x: { ticks: { maxTicksLimit: 12, color: "#999" }, grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { color: "#999" }, grid: { color: "rgba(255,255,255,0.05)" } },
+                },
+            },
+        });
+    }
+
+    // Binge list
+    const bingeEl = document.getElementById("bingeList");
+    if (binges.length === 0) {
+        bingeEl.innerHTML = `<div class="empty-state"><p class="empty-state-text">No binge sessions detected yet.</p></div>`;
+    } else {
+        bingeEl.innerHTML = `<ul class="recent-list">${binges.map((b) => `
+            <li class="recent-item">
+                <div class="recent-episode">
+                    <div class="recent-show">${escapeHtml(b.show_title)}</div>
+                    <div class="recent-ep">${b.episode_count} episodes (${b.first_episode} - ${b.last_episode})</div>
+                </div>
+                <span class="recent-badge completed">${formatDuration(b.total_seconds)}</span>
+                <span class="recent-time">${b.date}</span>
+            </li>
+        `).join("")}</ul>`;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Movies
+// ---------------------------------------------------------------------------
+
+async function renderMovies() {
+    content().innerHTML = `
+        <div class="page-header">
+            <h1 class="page-title">Movies</h1>
+            <p class="page-subtitle">Tracked movie watches</p>
+        </div>
+        <div class="shows-grid" id="moviesGrid">
+            <div class="loading-state"><div class="spinner"></div></div>
+        </div>
+    `;
+
+    // There's no dedicated movies endpoint yet that returns aggregated data,
+    // so we use a simple fetch. The backend can be extended later.
+    let movies = [];
+    try {
+        const resp = await fetch("/api/export/history.json");
+        if (resp.ok) {
+            const all = await resp.json();
+            // Filter for movie watches if the data includes media_type
+            movies = all.filter((e) => e.media_type === "movie" || (e.show_title && !e.season_number && !e.episode_number));
+        }
+    } catch (_) {}
+
+    const grid = document.getElementById("moviesGrid");
+
+    if (movies.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">&#127909;</div>
+                <p class="empty-state-text">No movies tracked yet. Movies will appear here when detected.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Deduplicate by title
+    const seen = new Set();
+    const unique = [];
+    for (const m of movies) {
+        const key = (m.show_title || m.title || "").toLowerCase();
+        if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(m);
+        }
+    }
+
+    grid.innerHTML = unique.map((m) => `
+        <div class="show-card">
+            <div class="show-card-poster">&#127909;</div>
+            <div class="show-card-body">
+                <div class="show-card-title">${escapeHtml(m.show_title || m.title || "Unknown")}</div>
+                <div class="show-card-meta">
+                    ${m.started_at ? formatTimeAgo(m.started_at) : ""}
+                    ${m.duration_seconds ? " \u00b7 " + formatDuration(m.duration_seconds) : ""}
+                </div>
+                <div class="progress-text">${m.completed ? "Watched" : "Partial"} \u00b7 ${escapeHtml(m.source || "")}</div>
+            </div>
+        </div>
+    `).join("");
+}
+
+// ---------------------------------------------------------------------------
 // Currently Watching (auto-refresh)
 // ---------------------------------------------------------------------------
 
@@ -773,6 +996,8 @@ async function checkConnection() {
 Router.register("dashboard", renderDashboard);
 Router.register("shows", renderShows);
 Router.register("show", renderShowDetail);
+Router.register("movies", renderMovies);
+Router.register("stats", renderStats);
 Router.register("unresolved", renderUnresolved);
 Router.register("settings", renderSettings);
 

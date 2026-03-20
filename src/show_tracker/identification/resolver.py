@@ -114,6 +114,7 @@ class EpisodeResolver:
         tmdb_client: A configured TMDb API client.
         alias_store: Optional store for show alias lookups.
         cache_store: Optional store for caching TMDb results.
+        tvdb_client: Optional TVDb client for anime absolute-number fallback.
     """
 
     def __init__(
@@ -121,10 +122,12 @@ class EpisodeResolver:
         tmdb_client: TMDbClient,
         alias_store: AliasStore | None = None,
         cache_store: CacheStore | None = None,
+        tvdb_client: Any | None = None,
     ) -> None:
         self.tmdb = tmdb_client
         self.aliases: AliasStore = alias_store or _NullAliasStore()
         self.cache: CacheStore = cache_store or _NullCacheStore()
+        self.tvdb = tvdb_client
 
     def resolve(
         self,
@@ -227,6 +230,11 @@ class EpisodeResolver:
             raw_score = 0.0
 
         if best_show is None or raw_score < FUZZY_THRESHOLD:
+            # TVDb fallback: if TMDb failed and this looks like anime
+            # (no season, high episode number), try TVDb
+            tvdb_result = self._try_tvdb_fallback(parsed, source_type)
+            if tvdb_result is not None:
+                return tvdb_result
             return self._unresolved(parsed, source_type, match_method)
 
         tmdb_show_id = best_show["id"]
@@ -349,6 +357,114 @@ class EpisodeResolver:
             raw_input=raw_string,
             match_method="guessit+tmdb_fuzzy",
         )
+
+    # -- TVDb fallback for anime -------------------------------------------
+
+    def _try_tvdb_fallback(
+        self,
+        parsed: ParseResult,
+        source_type: str,
+    ) -> IdentificationResult | None:
+        """Try TVDb as a fallback for anime with absolute episode numbering.
+
+        Only triggers when:
+        - A TVDb client is configured
+        - TMDb confidence < 0.6 (low match)
+        - No season number in the parsed result
+        - Episode number > 50 (likely absolute numbering)
+
+        Returns an IdentificationResult if TVDb resolves it, else None.
+        """
+        if self.tvdb is None:
+            return None
+
+        # Only trigger for likely-anime patterns
+        if parsed.season is not None:
+            return None
+        if parsed.episode is None or parsed.episode <= 50:
+            return None
+
+        title_query = parsed.title.strip()
+        if not title_query:
+            return None
+
+        logger.debug(
+            "Attempting TVDb fallback for %r (absolute ep %d)",
+            title_query, parsed.episode,
+        )
+
+        try:
+            from show_tracker.identification.tvdb_client import TVDbError
+
+            # Search TVDb
+            results = self.tvdb.search(title_query, search_type="series")
+            if not results:
+                return None
+
+            # Take the first result (TVDb search is usually accurate for anime)
+            best = results[0]
+            tvdb_id = best.get("tvdb_id") or best.get("id")
+            if tvdb_id is None:
+                return None
+
+            tvdb_id = int(tvdb_id)
+            show_name = best.get("name", title_query)
+
+            # Map absolute episode to season/episode
+            mapping = self.tvdb.map_absolute_to_season_episode(tvdb_id, parsed.episode)
+            if mapping is None:
+                return None
+
+            season, episode = mapping
+
+            # Try to find this show on TMDb via TVDb external ID
+            try:
+                find_result = self.tmdb.find_by_external_id(str(tvdb_id), "tvdb_id")
+                tv_results = find_result.get("tv_results", [])
+                if tv_results:
+                    tmdb_show_id = tv_results[0]["id"]
+                    show_name = tv_results[0].get("name", show_name)
+
+                    # Now resolve with the TMDb show ID and mapped season/episode
+                    # Create a modified ParseResult with the mapped values
+                    mapped_parsed = ParseResult(
+                        title=show_name,
+                        season=season,
+                        episode=episode,
+                        year=parsed.year,
+                        episode_title=parsed.episode_title,
+                        content_type="episode",
+                        source_type=parsed.source_type,
+                        raw_input=parsed.raw_input,
+                        url_match=parsed.url_match,
+                    )
+
+                    return self._resolve_with_show_id(
+                        tmdb_show_id, mapped_parsed, source_type,
+                        match_method="tvdb_absolute_fallback",
+                        tmdb_match_score=0.75,
+                    )
+            except TMDbError:
+                logger.debug("TMDb find_by_external_id failed for TVDb ID %d", tvdb_id)
+
+            # If TMDb cross-ref failed, return a result with TVDb info only
+            confidence = calculate_confidence(parsed, 0.70, source_type, "tvdb_absolute_fallback")
+            return IdentificationResult(
+                tmdb_episode_id=None,
+                tmdb_show_id=None,
+                show_name=show_name,
+                season=season,
+                episode=episode,
+                episode_title=None,
+                confidence=confidence,
+                source=source_type,
+                raw_input=parsed.raw_input,
+                match_method="tvdb_absolute_fallback",
+            )
+
+        except Exception:
+            logger.debug("TVDb fallback failed for %r", title_query, exc_info=True)
+            return None
 
     # -- internal helpers --------------------------------------------------
 

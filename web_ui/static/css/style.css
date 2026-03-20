@@ -1054,3 +1054,29 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+/* ---------------------------------------------------------------------------
+   Stats Page — Charts
+   --------------------------------------------------------------------------- */
+
+.stats-charts {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.stats-charts .card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.chart-container {
+    position: relative;
+    height: 260px;
+    padding: 8px 0;
+}
+
+.chart-container canvas {
+    max-height: 100%;
+}

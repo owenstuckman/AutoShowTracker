@@ -77,6 +77,27 @@ async def identify_media(
             out["media_type"] = "movie"
             return out
         else:
+            # If this is a YouTube URL, try to enrich with YouTube API first
+            url_info = match_url(url) if url else None
+            if (
+                url_info
+                and url_info.platform == "youtube"
+                and url_info.platform_id
+                and settings.has_youtube_key()
+            ):
+                yt_enriched = _try_youtube_enrichment(
+                    url_info.platform_id, settings.youtube_api_key
+                )
+                if yt_enriched:
+                    # Use enriched data if it looks like a series
+                    enriched_string = yt_enriched.get("enriched_string", raw_string)
+                    result = resolver.resolve(enriched_string, source_type="youtube", url=url)
+                    if result.tmdb_show_id is not None or result.confidence >= 0.3:
+                        out = asdict(result)
+                        out["media_type"] = "episode"
+                        out["youtube_info"] = yt_enriched
+                        return out
+
             result = resolver.resolve(raw_string, source_type=source, url=url)
             if result.tmdb_show_id is None and result.confidence < 0.3:
                 return None
@@ -85,3 +106,46 @@ async def identify_media(
             return out
     finally:
         client.close()
+
+
+def _try_youtube_enrichment(
+    video_id: str, api_key: str
+) -> dict[str, Any] | None:
+    """Try to get series info from YouTube Data API.
+
+    Returns enrichment data if the video looks like part of a series,
+    or None otherwise.
+    """
+    try:
+        from show_tracker.identification.youtube_client import YouTubeClient, YouTubeError
+
+        yt = YouTubeClient(api_key=api_key)
+        try:
+            info = yt.detect_series_info(video_id)
+            if info and info.get("is_series") and info.get("series_name"):
+                # Build an enriched string for the resolver
+                series = info["series_name"]
+                ep = info.get("episode_number")
+                season = info.get("season_number")
+                if season and ep:
+                    enriched = f"{series} S{season:02d}E{ep:02d}"
+                elif ep:
+                    enriched = f"{series} E{ep:02d}"
+                else:
+                    enriched = series
+
+                return {
+                    "enriched_string": enriched,
+                    "series_name": series,
+                    "episode_number": ep,
+                    "season_number": season,
+                    "channel_name": info.get("channel_name"),
+                    "playlist_id": info.get("playlist_id"),
+                    "playlist_index": info.get("playlist_index"),
+                }
+        finally:
+            yt.close()
+    except Exception:
+        pass
+
+    return None
