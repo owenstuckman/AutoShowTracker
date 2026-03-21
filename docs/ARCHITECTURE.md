@@ -91,12 +91,14 @@ All three streams produce a unified `DetectionEvent` dataclass that flows into t
 The `EpisodeResolver` processes each `DetectionEvent` through a resolution chain:
 
 1. **URL Pattern Matching** (`url_patterns.py`): Checks if the URL matches a known streaming platform (Netflix, Hulu, Disney+, HBO Max, Amazon Prime, YouTube, Crunchyroll, etc.) and extracts platform-specific content IDs.
-2. **String Parsing** (`parser.py`): Uses `guessit` to extract show name, season, episode, year, and quality from the raw string.
-3. **Alias Lookup**: Checks the `show_aliases` table for known mappings (e.g., "SVU" maps to "Law & Order: Special Victims Unit").
-4. **Cache Check**: Looks up prior TMDb search results in `media_cache.db` to avoid redundant API calls.
-5. **TMDb Search + Fuzzy Match**: Searches the TMDb API and uses `rapidfuzz.fuzz.ratio` to find the best match above an 80% threshold. A small popularity boost breaks ties.
-6. **Episode Fetch**: Retrieves episode details from TMDb and caches the result.
-7. **Confidence Scoring** (`confidence.py`): Computes a 0.0-1.0 confidence score.
+2. **YouTube Enrichment** (`youtube_client.py`): For YouTube URLs, queries the YouTube Data API v3 to fetch video/playlist metadata and detect series info from playlist structure or title patterns.
+3. **String Parsing** (`parser.py`): Uses `guessit` to extract show name, season, episode, year, and quality from the raw string. Auto-detects movies vs. episodes.
+4. **Alias Lookup**: Checks the `show_aliases` table for known mappings (e.g., "SVU" maps to "Law & Order: Special Victims Unit").
+5. **Cache Check**: Looks up prior TMDb search results in `media_cache.db` to avoid redundant API calls.
+6. **TMDb Search + Fuzzy Match**: Searches the TMDb API and uses `rapidfuzz.fuzz.ratio` to find the best match above an 80% threshold. A small popularity boost breaks ties. Supports both TV shows and movies.
+7. **TVDb Fallback** (`tvdb_client.py`): If TMDb confidence is low, no season number is present, and episode number exceeds 50, tries TVDb for anime with absolute episode numbering and maps to season/episode format.
+8. **Episode/Movie Fetch**: Retrieves episode or movie details from TMDb and caches the result.
+9. **Confidence Scoring** (`confidence.py`): Computes a 0.0-1.0 confidence score.
 
 ### 3. Confidence Routing
 
@@ -127,7 +129,9 @@ ActivityWatch ─── REST polling ──────────────�
                                                ├──► DetectionService
 SMTC/MPRIS ─── OS event callback ────────────┤     (deduplication,
                                                │      heartbeat mgmt)
-VLC/mpv IPC ─── socket/HTTP polling ──────────┘          │
+VLC/mpv IPC ─── socket/HTTP polling ──────────┤
+                                               │
+Plex/Jellyfin/Emby ─── webhooks ──────────────┘          │
                                                           ▼
                                                EpisodeResolver.resolve()
                                                     │
@@ -162,15 +166,17 @@ VLC/mpv IPC ─── socket/HTTP polling ──────────┘     
 
 When multiple detection sources report information about the same playback session, the system prioritizes them in this order:
 
-1. **Browser Extension (structured metadata)**: Highest priority because it extracts structured data directly from the page: URL patterns for platform identification, JSON-LD schema markup, Open Graph tags, and video element state. This gives the most complete and accurate signal.
+1. **Plex/Jellyfin/Emby Webhooks**: Highest priority. Media servers send structured events with show name, season, episode, and playback state directly. Receives a 0.90 base confidence score.
 
-2. **SMTC / MPRIS (OS media session)**: The operating system's media transport layer provides the media title, artist, and playback state as reported by the application itself. Reliable but often lacks season/episode information.
+2. **Browser Extension (structured metadata)**: Extracts structured data directly from the page: URL patterns for platform identification, JSON-LD schema markup, Open Graph tags, and video element state. Very complete and accurate signal.
 
-3. **Player IPC (VLC web interface, mpv JSON IPC)**: Direct communication with the media player provides the file path, which can be parsed for episode information. Very reliable for local media files.
+3. **SMTC / MPRIS (OS media session)**: The operating system's media transport layer provides the media title, artist, and playback state as reported by the application itself. Reliable but often lacks season/episode information.
 
-4. **ActivityWatch (window titles / web watcher)**: Passive observation of window titles. Useful as a fallback but window titles vary widely in format and may be truncated.
+4. **Player IPC (VLC web interface, mpv JSON IPC)**: Direct communication with the media player provides the file path, which can be parsed for episode information. Very reliable for local media files.
 
-5. **OCR (screenshot analysis)**: Last resort. Takes a screenshot of the player window, crops the title/overlay region, and runs Tesseract or EasyOCR. Inherently noisy and receives a confidence penalty.
+5. **ActivityWatch (window titles / web watcher)**: Passive observation of window titles. Useful as a fallback but window titles vary widely in format and may be truncated.
+
+6. **OCR (screenshot analysis)**: Last resort. Takes a screenshot of the player window, crops the title/overlay region, and runs Tesseract or EasyOCR. Inherently noisy and receives a confidence penalty.
 
 This ordering reflects the signal-to-noise ratio of each source. Browser metadata gives explicit structured data, while OCR produces noisy text that may contain artifacts.
 

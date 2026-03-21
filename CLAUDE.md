@@ -70,11 +70,14 @@ Design docs 00-09 in `docs/design/`. Key references:
 - Detection priority chain (six levels): `docs/design/03_MEDIA_DETECTION.md`
 - Identification pipeline (guessit + TMDb fuzzy matching + confidence scoring): `docs/design/04_CONTENT_IDENTIFICATION.md`
 - Full SQLite schema: `docs/design/07_DATA_MODEL.md`
+- Full docs index: `docs/INDEX.md`
 - Architecture deep-dive: `docs/ARCHITECTURE.md`
 - Implementation decisions (D001-D013): `docs/DECISIONS.md`
 - Setup guide: `docs/SETUP.md`
 - API reference: `docs/API_REFERENCE.md`
+- Distribution/packaging: `docs/DISTRIBUTION.md`
 - Project status and TODO: `docs/TODO.md`
+- Manual tasks: `docs/HUMAN_TODO.md`
 
 ## Key Dependencies
 

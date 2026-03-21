@@ -2,71 +2,22 @@
 
 ## What Is Done
 
-All five architectural layers are implemented with working code, tests, and documentation.
+All five architectural layers are implemented. All planned phases (0–4) are code-complete.
 
-### Phase 0: Identification Pipeline (Complete)
-- Parser with guessit integration and preprocessing for browser titles, filenames, SMTC metadata
-- URL pattern matching for Netflix, YouTube, Crunchyroll, Plex, Disney+, Hulu, Amazon Prime, HBO Max, and generic pirate sites
-- TMDb API client (httpx-based) with search, show detail, episode detail, find-by-external-id, search_movie, get_movie
-- Episode resolver with alias lookup, cache, fuzzy matching (rapidfuzz, 0.80 threshold), confidence scoring
-- Movie identification support with `MovieIdentificationResult` and `resolve_movie()` in resolver
-- 249 passing tests (52 unit + 197 integration across 100+ real-world inputs)
-- CLI: `show-tracker identify "filename.mkv"` (auto-detects movies vs episodes)
+| Phase | Scope | Status |
+|-------|-------|--------|
+| **0** | Identification pipeline (guessit + TMDb + fuzzy matching + confidence scoring) | Complete |
+| **1** | Windows MVP (ActivityWatch, SMTC/MPRIS, browser extension, FastAPI API, web UI, storage, CLI) | Complete |
+| **1D** | Packaging (PyInstaller, system tray, first-run wizard) | Complete |
+| **2** | Robust detection (VLC/mpv IPC, file handles, OCR, movie support, TVDb fallback, YouTube enrichment) | Complete |
+| **3** | Cross-platform (macOS MediaRemote stub, macOS screenshot, Linux AppImage) | Complete |
+| **4** | Advanced features (analytics, webhooks, notifications, Trakt sync, Alembic migrations) | Complete |
 
-### Phase 1: Windows Desktop MVP (Complete)
-- **ActivityWatch integration**: REST client, event poller, bucket discovery, process manager with crash recovery, mock client for testing
-- **SMTC listener**: Windows media session detection via winsdk WinRT bindings (event-driven)
-- **MPRIS listener**: Linux D-Bus media session detection via dbus-next (event-driven)
-- **Detection service**: Central orchestrator merging AW + SMTC/MPRIS + browser signals, deduplication, grace period, confidence routing
-- **Browser extension**: Chrome Manifest V3 + Firefox WebExtension port with content script (schema.org, Open Graph, video element monitoring, heartbeats), background service worker, popup UI
-- **FastAPI API**: All endpoints for media events, watch history, show detail, episode grid, stats, unresolved queue, settings, aliases, export, webhooks, analytics
-- **Web UI**: Vanilla JS SPA with dashboard, shows grid, show detail with season tabs, unresolved resolution workflow, settings page
-- **Storage**: Dual SQLite databases (watch_history.db + media_cache.db), SQLAlchemy ORM, repository pattern with heartbeat merging
-- **CLI**: `show-tracker run`, `show-tracker init-db`, `show-tracker identify`, `show-tracker test-pipeline`, `show-tracker setup`
+**Infrastructure:** GitHub Actions CI (Ubuntu + Windows, Python 3.11/3.12), systemd service, export API, Firefox extension port, privacy policy, third-party licenses, full documentation.
 
-### Phase 1D: Packaging (Complete)
-- **PyInstaller spec**: `show_tracker.spec` with data files, hidden imports, platform-specific bundling
-- **System tray icon**: `src/show_tracker/tray.py` via pystray — Open Dashboard, Quit menu items, integrated with `show-tracker run`
-- **First-run wizard**: `src/show_tracker/first_run.py` — CLI wizard for TMDb API key, validation, database init; `show-tracker setup` command; auto-triggers on first `run`
+**Testing:** 249 unit + integration tests, Playwright browser extension E2E, OCR accuracy benchmark, API load test.
 
-### Phase 2: Robust Detection (Complete)
-- **VLC IPC**: HTTP interface client for VLC's web API (status, title, duration, position)
-- **mpv IPC**: JSON IPC socket/pipe client (media-title, duration, position, path)
-- **File handle inspection**: Cross-platform open file detection via psutil
-- **Player service**: Orchestrator that tries native IPC then falls back to file handles
-- **OCR subsystem**: Screenshot capture (Windows, Linux, macOS), per-app region cropping from JSON profiles, Tesseract + EasyOCR engines, preprocessing pipeline, orchestrator service
-- **Browser event handler**: Priority chain (schema.org > Open Graph > URL pattern > page title)
-- **Movie support**: TMDb movie search/detail, MovieIdentificationResult, MovieWatch model, auto-detect content type
-
-### Phase 3: Cross-Platform (Complete)
-- **macOS MediaRemote listener**: Stub at `src/show_tracker/detection/macos_listener.py` with MediaSessionListener protocol (requires pyobjc on macOS to activate)
-- **macOS screenshot capture**: Added to `src/show_tracker/ocr/screenshot.py` — Quartz CGWindowListCreateImage + screencapture CLI fallback
-
-### Phase 4: Advanced Features (Complete)
-- **Watch time analytics**: `GET /api/stats/daily`, `GET /api/stats/weekly`, `GET /api/stats/monthly`, `GET /api/stats/binge-sessions`, `GET /api/stats/patterns`
-- **Plex/Jellyfin/Emby webhooks**: `POST /api/webhooks/plex`, `POST /api/webhooks/jellyfin`, `POST /api/webhooks/emby` — highest-accuracy detection source
-- **New episode notifications**: `src/show_tracker/notifications.py` — TMDb air date checking, plyer desktop notifications, deduplication
-- **Trakt.tv import**: `src/show_tracker/sync/trakt.py` — OAuth2 device flow, full watch history import, TMDb ID mapping, duplicate skip
-- **Trakt.tv two-way sync**: Export local watch events to Trakt scrobble API, sync timestamp tracking
-- **Database migrations**: Alembic setup with `alembic/env.py` supporting both WatchBase and CacheBase, batch mode for SQLite
-
-### Configuration & Utilities (Complete)
-- Pydantic-settings config with env vars, .env file, JSON defaults
-- 50+ initial show alias seed data
-- Default OCR region profiles for VLC, mpv, Plex, MPC-HC, Kodi
-- Structured logging with file rotation
-
-### Infrastructure & Distribution (Complete)
-- **GitHub Actions CI**: Matrix builds on Ubuntu + Windows, Python 3.11 + 3.12 (lint, format, type check, test)
-- **Linux systemd service**: User service file at `contrib/show-tracker.service`
-- **Export API**: JSON and CSV export for watch history and shows (`/api/export/`)
-- **Firefox extension**: Full port at `browser_extension/firefox/` (Manifest V2, browser.* APIs, gecko settings)
-- **Privacy policy**: `PRIVACY_POLICY.md` covering data collection, storage, browser extension permissions, third-party services
-- **Third-party licenses**: `THIRD_PARTY_LICENSES.txt` listing all dependency licenses
-- **Documentation**: README.md, docs/SETUP.md, docs/ARCHITECTURE.md, docs/DECISIONS.md, docs/API_REFERENCE.md, design docs in docs/design/
-
-### Testing (Partial)
-- **End-to-end ActivityWatch tests**: `tests/integration/test_activitywatch.py` — event parsing, URL matching, deduplication, heartbeat merging
+**Distribution tooling:** Release workflow (`.github/workflows/release.yml`), extension packager, version bump script, PyPI metadata.
 
 ---
 

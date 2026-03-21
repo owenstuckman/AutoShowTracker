@@ -11,7 +11,8 @@
       "Bash(.venv/bin/python -c \"\nfrom show_tracker.identification.parser import parse_media_string\ntests = [\n    \\('The Last of Us Season 1 Episode 3 | HBO Max', 'browser_title'\\),\n    \\('Naruto 135', 'filename'\\),\n]\nfor inp, src in tests:\n    r = parse_media_string\\(inp, src\\)\n    print\\(f'{inp!r:55s} -> title={r.title!r}, S{r.season}E{r.episode}'\\)\n\")",
       "Bash(.venv/bin/python -c \"\nfrom guessit import guessit\nprint\\(guessit\\('The Last of Us Season 1 Episode 3'\\)\\)\nprint\\(\\)\nprint\\(guessit\\('Naruto 135'\\)\\)\n\")",
       "Bash(.venv/bin/python -m pytest tests/ -v --tb=short 2>&1 | tail -30)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(wc:*)"
     ]
   }
 }

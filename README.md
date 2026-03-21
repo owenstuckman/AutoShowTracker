@@ -38,6 +38,7 @@ show-tracker run
 | Command | Description |
 |---------|-------------|
 | `show-tracker run` | Start all services (API, detection, web UI) |
+| `show-tracker setup` | Interactive first-run wizard (TMDb key, DB init) |
 | `show-tracker identify <string>` | Identify a single media string |
 | `show-tracker test-pipeline` | Run accuracy tests on the identification pipeline |
 | `show-tracker init-db` | Initialize/create database files |
@@ -66,15 +67,16 @@ Key settings: `TMDB_API_KEY` (required), `ST_DATA_DIR` (default: `~/.show-tracke
 
 | Document | Description |
 |----------|-------------|
-| [Setup Guide](docs/SETUP.md) | Detailed installation, configuration, VLC/mpv setup |
+| [Docs Index](docs/INDEX.md) | Full documentation index |
+| [Setup Guide](docs/SETUP.md) | Installation, configuration, VLC/mpv setup, browser extension |
 | [Architecture](docs/ARCHITECTURE.md) | System architecture, data flow, design tradeoffs |
-| [Decisions](docs/DECISIONS.md) | Numbered implementation decision log (D001-D013) |
 | [API Reference](docs/API_REFERENCE.md) | Full HTTP API documentation |
+| [Distribution](docs/DISTRIBUTION.md) | Building, packaging, and publishing releases |
+| [Decisions](docs/DECISIONS.md) | Numbered implementation decision log (D001-D013) |
 | [TODO](docs/TODO.md) | Project status and remaining work |
 | [Human TODO](docs/HUMAN_TODO.md) | Manual tasks requiring human action |
 | [Design Docs](docs/design/) | Original design specifications (00-09) |
 | [Privacy Policy](PRIVACY_POLICY.md) | Data collection and privacy details |
-| [Third-Party Licenses](THIRD_PARTY_LICENSES.txt) | Dependency license listing |
 
 ## Tests
 

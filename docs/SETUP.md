@@ -122,9 +122,19 @@ echo 'TMDB_API_KEY=your_key_here' >> .env
 
 ---
 
-## Database Initialization
+## First-Run Setup
 
-Before first use, initialize the SQLite databases:
+The easiest way to get started is the interactive setup wizard:
+
+```bash
+show-tracker setup
+```
+
+This walks you through TMDb API key configuration, validates connectivity, and initializes the databases. It also runs automatically the first time you call `show-tracker run`.
+
+### Manual Database Initialization
+
+Alternatively, initialize the databases directly:
 
 ```bash
 show-tracker init-db
@@ -235,15 +245,22 @@ The project uses `pytest-asyncio` with `asyncio_mode = "auto"`, so async test fu
 
 ## Browser Extension Installation
 
-The Chrome extension lives in `browser_extension/chrome/`.
+Extensions are available for both Chrome and Firefox in `browser_extension/`.
 
-### Load as Unpacked Extension
+### Chrome
 
 1. Open Chrome and navigate to `chrome://extensions/`.
 2. Enable **Developer mode** (toggle in the top-right corner).
 3. Click **Load unpacked**.
 4. Select the `browser_extension/chrome/` directory from this repository.
 5. The extension icon should appear in your toolbar.
+
+### Firefox
+
+1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on**.
+3. Select `browser_extension/firefox/manifest.json`.
+4. The extension icon should appear in your toolbar.
 
 ### Verify Connection
 
