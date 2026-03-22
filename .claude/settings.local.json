@@ -12,7 +12,9 @@
       "Bash(.venv/bin/python -c \"\nfrom guessit import guessit\nprint\\(guessit\\('The Last of Us Season 1 Episode 3'\\)\\)\nprint\\(\\)\nprint\\(guessit\\('Naruto 135'\\)\\)\n\")",
       "Bash(.venv/bin/python -m pytest tests/ -v --tb=short 2>&1 | tail -30)",
       "Bash(git status:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(pip install:*)",
+      "Bash(pip3 install:*)"
     ]
   }
 }
