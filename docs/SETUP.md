@@ -5,7 +5,7 @@
 - **Python 3.11 or later** (3.12+ also works)
 - **SQLite 3.35+** (ships with Python 3.11+)
 - **Git** (for cloning the repository)
-- **Operating System**: Windows 10/11, Linux (Ubuntu 20.04+, Fedora 38+, Arch), or macOS 13+ (partial support)
+- **Operating System**: Windows 10/11, Linux (Ubuntu 20.04+, Fedora 38+, Arch), WSL2, or macOS 13+ (partial support)
 
 ### Optional Prerequisites
 
@@ -65,12 +65,17 @@ pip install -e ".[windows]"
 # Linux-specific (MPRIS listener via dbus-next)
 pip install -e ".[linux]"
 
+# WSL — use dev only (SMTC and MPRIS are unavailable)
+pip install -e ".[dev]"
+
 # Development tools (pytest, ruff, mypy)
 pip install -e ".[dev]"
 
 # Multiple groups at once
 pip install -e ".[ocr,windows,dev]"
 ```
+
+> **WSL2 users**: The auto-setup script (`python scripts/auto_setup.py`) detects WSL automatically and installs the right dependencies. SMTC and MPRIS are unavailable under WSL — use the browser extension as your primary detection source. See [HUMAN_TODO.md](HUMAN_TODO.md#wsl-notes) for details.
 
 ---
 
@@ -170,7 +175,7 @@ This launches:
 - The FastAPI HTTP API on `http://127.0.0.1:7600`
 - The web UI dashboard at `http://127.0.0.1:7600/`
 - ActivityWatch integration (polling)
-- SMTC listener (Windows) or MPRIS listener (Linux)
+- SMTC listener (Windows), MPRIS listener (Linux), or neither (WSL/macOS — gracefully skipped)
 
 **Options:**
 

@@ -69,9 +69,9 @@ def detect_platform() -> dict[str, str]:
         info["platform_extra"] = "windows"
     elif system == "linux":
         if wsl:
-            # WSL reports as Linux but cannot use D-Bus/MPRIS or X11.
-            # Install minimal linux extras; skip dbus-next (will fail at runtime).
-            info["platform_extra"] = "linux"
+            # WSL cannot use D-Bus/MPRIS or X11, so skip the linux extras
+            # (dbus-next, pystray) — they won't work at runtime.
+            info["platform_extra"] = ""
         else:
             info["platform_extra"] = "linux"
     elif system == "darwin":

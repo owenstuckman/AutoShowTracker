@@ -22,6 +22,7 @@ source .venv/bin/activate  # Linux/macOS
 # Install with platform-specific extras
 pip install -e ".[dev,ocr,windows]"  # Windows
 pip install -e ".[dev,ocr,linux]"    # Linux
+pip install -e ".[dev]"              # WSL (or use: python scripts/auto_setup.py)
 
 # Configure
 cp .env.example .env
