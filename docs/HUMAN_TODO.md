@@ -19,6 +19,8 @@ Options:
 - `--extras ocr notifications` — Add optional dependency groups
 - `--no-interactive` — Skip the TMDb API key prompt (set it later in `.env`)
 
+The script auto-detects WSL and adjusts accordingly (see [WSL notes](#wsl-notes) below).
+
 After it completes, activate and run:
 ```bash
 # Windows PowerShell
@@ -27,12 +29,24 @@ After it completes, activate and run:
 # Windows cmd
 .venv\Scripts\activate.bat
 
-# Linux / macOS
+# Linux / macOS / WSL
 source .venv/bin/activate
 
 # Start tracking
 show-tracker run
 ```
+
+### WSL Notes
+
+AutoShowTracker runs under WSL2 but with some limitations:
+
+- **No SMTC or MPRIS**: WSL cannot access Windows System Media Transport Controls or Linux D-Bus. The auto-setup script detects WSL and skips these.
+- **Primary detection**: Use the **browser extension** as your main detection source. Load it in your Windows browser and point it at the WSL service.
+- **Dashboard access from Windows**: Open `http://localhost:7600` in your Windows browser. WSL2 automatically forwards localhost ports. If that doesn't work, find your WSL IP with `hostname -I` and use `http://<WSL_IP>:7600`.
+- **VLC/mpv IPC**: Works only if the player runs inside WSL (not the Windows-side install). Most users will rely on the browser extension instead.
+- **ActivityWatch**: If you run ActivityWatch on Windows, the WSL service can poll it — set `ST_ACTIVITYWATCH_PORT=5600` in `.env` and ensure the AW server is reachable from WSL.
+- **OCR**: Not functional under WSL (no X11/Wayland display server by default).
+- **File paths**: The project can live on the Windows filesystem (`/mnt/c/...`) or the WSL filesystem (`~/...`). Performance is better on the WSL filesystem.
 
 ### Manual Setup (Step-by-Step)
 
@@ -77,6 +91,9 @@ pip install -e ".[dev,windows]"
 
 # Linux (core + MPRIS + dev tools)
 pip install -e ".[dev,linux]"
+
+# WSL (core + dev tools — SMTC/MPRIS not available)
+pip install -e ".[dev]"
 
 # Add OCR support
 pip install -e ".[dev,windows,ocr]"      # Windows + OCR

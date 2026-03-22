@@ -42,20 +42,38 @@ def _run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, check=True, **kwargs)
 
 
+def _is_wsl() -> bool:
+    """Detect if running inside Windows Subsystem for Linux."""
+    if platform.system().lower() != "linux":
+        return False
+    try:
+        with open("/proc/version", encoding="utf-8") as f:
+            return "microsoft" in f.read().lower()
+    except OSError:
+        return False
+
+
 def detect_platform() -> dict[str, str]:
     """Detect OS and return platform info."""
     system = platform.system().lower()
+    wsl = _is_wsl()
     info = {
         "system": system,
         "platform_extra": "",
         "python": sys.executable,
         "python_version": platform.python_version(),
+        "is_wsl": str(wsl),
     }
 
     if system == "windows":
         info["platform_extra"] = "windows"
     elif system == "linux":
-        info["platform_extra"] = "linux"
+        if wsl:
+            # WSL reports as Linux but cannot use D-Bus/MPRIS or X11.
+            # Install minimal linux extras; skip dbus-next (will fail at runtime).
+            info["platform_extra"] = "linux"
+        else:
+            info["platform_extra"] = "linux"
     elif system == "darwin":
         info["platform_extra"] = "linux"  # macOS uses linux extras (dbus-next won't install but that's ok)
     else:
@@ -102,7 +120,13 @@ def create_venv() -> Path:
     return venv_python
 
 
-def install_dependencies(python: Path, platform_extra: str, extra_groups: list[str]) -> None:
+def install_dependencies(
+    python: Path,
+    platform_extra: str,
+    extra_groups: list[str],
+    *,
+    is_wsl: bool = False,
+) -> None:
     """Install the project with appropriate extras."""
     _step(3, "Installing dependencies")
 
@@ -121,6 +145,12 @@ def install_dependencies(python: Path, platform_extra: str, extra_groups: list[s
 
     print(f"  Installing: pip install -e \".[{extras}]\"")
     _run([str(python), "-m", "pip", "install", "-e", install_spec])
+
+    if is_wsl:
+        print()
+        print("  WSL detected — installing without D-Bus/MPRIS support.")
+        print("  SMTC (Windows) and MPRIS (Linux) media listeners are unavailable in WSL.")
+        print("  Detection will rely on: browser extension, ActivityWatch, VLC/mpv IPC.")
 
 
 def setup_env_file() -> None:
@@ -256,7 +286,16 @@ def print_next_steps(plat: dict[str, str]) -> None:
     print("  - Identify a title:           show-tracker identify \"Breaking Bad S05E14\"")
     print()
 
-    if system == "windows":
+    is_wsl = plat.get("is_wsl") == "True"
+
+    if is_wsl:
+        print("WSL-specific:")
+        print("  - SMTC and MPRIS media listeners are NOT available in WSL")
+        print("  - Use the browser extension as your primary detection source")
+        print("  - VLC/mpv IPC works if the player runs inside WSL (not Windows-side)")
+        print("  - To access the dashboard from Windows: http://localhost:7600")
+        print("  - If the Windows browser can't reach WSL, try http://$(hostname -I | awk '{print $1}'):7600")
+    elif system == "windows":
         print("Windows-specific:")
         print("  - SMTC detection is enabled automatically (play media to test)")
         print("  - System tray icon appears when running")
@@ -284,7 +323,10 @@ def main() -> None:
         sys.exit(1)
 
     plat = detect_platform()
+    is_wsl = plat["is_wsl"] == "True"
     print(f"  Python {plat['python_version']} on {plat['system']}")
+    if is_wsl:
+        print("  Environment: WSL (Windows Subsystem for Linux)")
     print(f"  Platform extras: {plat['platform_extra'] or 'none'}")
 
     # Step 2: Create venv
@@ -295,7 +337,7 @@ def main() -> None:
         python = create_venv()
 
     # Step 3: Install dependencies
-    install_dependencies(python, plat["platform_extra"], args.extras)
+    install_dependencies(python, plat["platform_extra"], args.extras, is_wsl=is_wsl)
 
     # Step 4: Setup .env
     setup_env_file()

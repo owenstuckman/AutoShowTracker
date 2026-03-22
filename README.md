@@ -72,6 +72,7 @@ Key settings: `TMDB_API_KEY` (required), `ST_DATA_DIR` (default: `~/.show-tracke
 | [Architecture](docs/ARCHITECTURE.md) | System architecture, data flow, design tradeoffs |
 | [API Reference](docs/API_REFERENCE.md) | Full HTTP API documentation |
 | [Distribution](docs/DISTRIBUTION.md) | Building, packaging, and publishing releases |
+| [ActivityWatch](docs/ACTIVITYWATCH.md) | ActivityWatch integration details |
 | [Decisions](docs/DECISIONS.md) | Numbered implementation decision log (D001-D013) |
 | [TODO](docs/TODO.md) | Project status and remaining work |
 | [Human TODO](docs/HUMAN_TODO.md) | Manual tasks requiring human action |

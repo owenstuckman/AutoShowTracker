@@ -65,13 +65,25 @@ class MediaSessionListener(Protocol):
         ...
 
 
-def get_media_listener() -> MediaSessionListener:
+def _is_wsl() -> bool:
+    """Detect if running inside Windows Subsystem for Linux."""
+    if sys.platform != "linux":
+        return False
+    try:
+        with open("/proc/version", encoding="utf-8") as f:
+            return "microsoft" in f.read().lower()
+    except OSError:
+        return False
+
+
+def get_media_listener() -> MediaSessionListener | None:
     """Return the appropriate :class:`MediaSessionListener` for the current OS.
+
+    Returns *None* on platforms where no listener is available (e.g. WSL,
+    unsupported OS) so callers can degrade gracefully.
 
     Raises
     ------
-    RuntimeError
-        If the current platform is not supported (neither Windows nor Linux).
     ImportError
         If the required platform-specific package is not installed.
     """
@@ -81,11 +93,18 @@ def get_media_listener() -> MediaSessionListener:
         return SMTCListener()
 
     if sys.platform == "linux":
+        if _is_wsl():
+            # WSL cannot access D-Bus or Windows SMTC — no media listener.
+            import logging
+
+            logging.getLogger(__name__).info(
+                "WSL detected — SMTC and MPRIS media listeners are unavailable. "
+                "Detection will rely on browser extension, ActivityWatch, and player IPC."
+            )
+            return None
+
         from show_tracker.detection.mpris_listener import MPRISListener
 
         return MPRISListener()
 
-    raise RuntimeError(
-        f"No media session listener available for platform {sys.platform!r}. "
-        "Supported platforms: Windows (win32), Linux."
-    )
+    return None

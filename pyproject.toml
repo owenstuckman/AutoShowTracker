@@ -28,13 +28,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Multimedia :: Video",
 ]
-
-[project.urls]
-Homepage = "https://github.com/ostuc/AutoShowTracker"
-Repository = "https://github.com/ostuc/AutoShowTracker"
-Issues = "https://github.com/ostuc/AutoShowTracker/issues"
-Documentation = "https://github.com/ostuc/AutoShowTracker/tree/main/docs"
-
 dependencies = [
     "guessit>=3.8",
     "requests>=2.31",
@@ -80,6 +73,12 @@ dev = [
 
 [project.scripts]
 show-tracker = "show_tracker.main:cli"
+
+[project.urls]
+Homepage = "https://github.com/owenstuckman/AutoShowTracker"
+Repository = "https://github.com/owenstuckman/AutoShowTracker"
+Issues = "https://github.com/owenstuckman/AutoShowTracker/issues"
+Documentation = "https://github.com/owenstuckman/AutoShowTracker/tree/main/docs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/show_tracker"]
