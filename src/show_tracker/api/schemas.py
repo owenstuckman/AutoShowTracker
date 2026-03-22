@@ -225,3 +225,25 @@ class AliasOut(BaseModel):
 class HealthResponse(BaseModel):
     status: str = "ok"
     version: str = ""
+
+
+# ---------------------------------------------------------------------------
+# YouTube
+# ---------------------------------------------------------------------------
+
+class YouTubeWatchOut(BaseModel):
+    id: int
+    video_id: str
+    title: str
+    channel_name: str | None = None
+    duration_seconds: int | None = None
+    watched_seconds: int | None = None
+    started_at: str
+    ended_at: str | None = None
+
+
+class YouTubeStats(BaseModel):
+    total_watches: int = 0
+    unique_videos: int = 0
+    total_watch_seconds: int = 0
+    top_channels: list[dict] = Field(default_factory=list)

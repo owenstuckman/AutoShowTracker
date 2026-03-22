@@ -109,6 +109,14 @@ const API = {
         return this._fetch("/api/stats/patterns");
     },
 
+    // YouTube
+    youtubeRecent(limit = 50) {
+        return this._fetch(`/api/youtube/recent?limit=${limit}`);
+    },
+    youtubeStats() {
+        return this._fetch("/api/youtube/stats");
+    },
+
     // Aliases
     addAlias(showId, alias) {
         return this._fetch("/api/aliases", {
@@ -862,6 +870,74 @@ async function renderStats() {
 }
 
 // ---------------------------------------------------------------------------
+// YouTube
+// ---------------------------------------------------------------------------
+
+async function renderYouTube() {
+    content().innerHTML = `
+        <div class="page-header">
+            <h1 class="page-title">YouTube</h1>
+            <p class="page-subtitle">Tracked YouTube video watches</p>
+        </div>
+        <div class="stat-cards" id="ytStatCards">
+            <div class="stat-card"><div class="stat-value">--</div><div class="stat-label">Total Watches</div></div>
+            <div class="stat-card"><div class="stat-value">--</div><div class="stat-label">Unique Videos</div></div>
+            <div class="stat-card"><div class="stat-value">--</div><div class="stat-label">Watch Time</div></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">Recent YouTube Videos</span></div>
+            <div id="ytList"><div class="loading-state"><div class="spinner"></div></div></div>
+        </div>
+    `;
+
+    const [stats, recent] = await Promise.all([
+        API.youtubeStats().catch(() => null),
+        API.youtubeRecent(50).catch(() => []),
+    ]);
+
+    // Stats
+    if (stats) {
+        document.getElementById("ytStatCards").innerHTML = `
+            <div class="stat-card">
+                <div class="stat-value">${stats.total_watches}</div>
+                <div class="stat-label">Total Watches</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${stats.unique_videos}</div>
+                <div class="stat-label">Unique Videos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${formatDuration(stats.total_watch_seconds)}</div>
+                <div class="stat-label">Watch Time</div>
+            </div>
+        `;
+    }
+
+    // Recent list
+    const listEl = document.getElementById("ytList");
+    if (recent.length === 0) {
+        listEl.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">&#9655;</div>
+                <p class="empty-state-text">No YouTube watches tracked yet. YouTube videos will appear here when detected via the browser extension.</p>
+            </div>
+        `;
+        return;
+    }
+
+    listEl.innerHTML = `<ul class="recent-list">${recent.map((v) => `
+        <li class="recent-item">
+            <div class="recent-episode">
+                <div class="recent-show">${escapeHtml(v.title)}</div>
+                <div class="recent-ep">${v.channel_name ? escapeHtml(v.channel_name) : v.video_id}${v.duration_seconds ? " \u00b7 " + formatDuration(v.duration_seconds) : ""}</div>
+            </div>
+            <a class="recent-badge completed" href="https://youtube.com/watch?v=${encodeURIComponent(v.video_id)}" target="_blank" rel="noopener" style="text-decoration:none">Watch</a>
+            <span class="recent-time">${formatTimeAgo(v.started_at)}</span>
+        </li>
+    `).join("")}</ul>`;
+}
+
+// ---------------------------------------------------------------------------
 // Movies
 // ---------------------------------------------------------------------------
 
@@ -996,6 +1072,7 @@ async function checkConnection() {
 Router.register("dashboard", renderDashboard);
 Router.register("shows", renderShows);
 Router.register("show", renderShowDetail);
+Router.register("youtube", renderYouTube);
 Router.register("movies", renderMovies);
 Router.register("stats", renderStats);
 Router.register("unresolved", renderUnresolved);

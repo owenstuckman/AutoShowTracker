@@ -44,6 +44,7 @@ dependencies = [
     "apscheduler>=3.10",
     "psutil>=5.9",
     "click>=8.1",
+    "python-multipart>=0.0.7",
 ]
 
 [project.optional-dependencies]
@@ -52,7 +53,7 @@ ocr = [
     "easyocr>=1.7",
 ]
 windows = [
-    "winsdk>=1.0",
+    "winsdk>=1.0.0b1",
     "pystray>=0.19",
 ]
 linux = [

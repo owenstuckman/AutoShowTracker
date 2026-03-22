@@ -87,6 +87,11 @@ def run(ctx: click.Context, host: str, port: int | None) -> None:
             settings = load_settings()
             ctx.obj["settings"] = settings
 
+    # Wire up file + console logging before anything else.
+    from show_tracker.utils.logging import setup_logging
+
+    setup_logging(log_dir=settings.log_dir)
+
     async def _start() -> None:
         click.echo(f"Show Tracker v{__version__}")
         click.echo(f"  Data directory : {settings.data_dir}")

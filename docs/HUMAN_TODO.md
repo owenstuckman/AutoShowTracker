@@ -201,6 +201,8 @@ Press `Ctrl+C` to stop.
 
 ## 2. Detection Source Testing
 
+> The `DetectionService` starts automatically with `show-tracker run`. It activates SMTC (Windows), MPRIS (Linux), and ActivityWatch polling alongside the browser extension and webhook endpoints.
+
 Test each source that's relevant to your setup. Start `show-tracker run` first, then open a second terminal to watch logs:
 
 ```bash
@@ -213,7 +215,60 @@ tail -f ~/.show-tracker/logs/show_tracker.log
 
 ### 2a. SMTC Listener (Windows)
 
-**What it does**: Captures "Now Playing" metadata from any app that reports to Windows System Media Transport Controls.
+**What it does**: Captures "Now Playing" metadata from any app that reports to Windows System Media Transport Controls — the highest-priority desktop detection source. Starts automatically with `show-tracker run` on Windows.
+
+#### Verification
+
+1. Verify `winsdk` is installed:
+   ```powershell
+   pip show winsdk
+   # Should show: Name: winsdk, Version: 1.0.0b10 (or similar)
+   ```
+   If missing: `pip install -e ".[windows]"`
+
+2. Verify SMTC is reporting on your system:
+   - Play audio/video in any app (VLC, Spotify, Edge, Chrome, etc.)
+   - Press a media key (Play/Pause) — a Windows overlay should appear with track info
+   - If no overlay: that player doesn't report to SMTC (older apps, some games)
+
+3. Verify the listener can import and instantiate:
+   ```powershell
+   python -c "from show_tracker.detection.smtc_listener import SMTCListener; print('OK')"
+   # Expected: OK
+   # If ImportError: winsdk not installed or wrong platform
+   ```
+
+4. Quick smoke test (standalone, outside `show-tracker run`):
+   ```powershell
+   python -c "
+   import asyncio
+   from show_tracker.detection.smtc_listener import SMTCListener
+
+   async def test():
+       listener = SMTCListener()
+       listener.register_callback(lambda e: print(f'  Got: {e.title} [{e.playback_status.value}]'))
+       await listener.start()
+       print('Listening for 15 seconds... play something in VLC/Spotify/browser')
+       await asyncio.sleep(15)
+       await listener.stop()
+
+   asyncio.run(test())
+   "
+   ```
+   - If it prints media titles: the listener works and wiring it into the app will enable detection
+   - If no output: check that media is actively playing and the app reports to SMTC
+
+#### Troubleshooting SMTC itself
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `ImportError: winsdk` | Package not installed | `pip install -e ".[windows]"` |
+| `SMTCListener` instantiates but no events | Player doesn't report to SMTC | Try Windows Media Player or Edge (they always report). VLC reports if "System Media Transport Controls" is enabled in Preferences > Interface > Control Interfaces |
+| Events show but title is empty | Some apps report playback status without metadata | Normal for some games/apps — the resolver will skip these |
+| `RuntimeError: SMTCListener is only supported on Windows` | Running on WSL or Linux | Expected — use browser extension instead |
+| Smoke test hangs or crashes | `winsdk` version mismatch or Python version issue | Try `pip install --force-reinstall winsdk==1.0.0b10` |
+
+#### Full test procedure
 
 1. Start `show-tracker run`
 2. Open VLC and play a TV show file (e.g., `Breaking.Bad.S01E01.720p.mkv`)
@@ -225,34 +280,62 @@ tail -f ~/.show-tracker/logs/show_tracker.log
    - Windows Media Player
    - Edge/Chrome playing Netflix or YouTube
    - Spotify (will detect music — resolver discards non-TV content)
-7. **Troubleshooting**:
-   - Verify `winsdk` installed: `pip show winsdk`
-   - Press Win + media key — if no overlay appears, the player doesn't report to SMTC
-   - Check logs for `winsdk` import errors
 
 ### 2b. MPRIS Listener (Linux)
 
-**What it does**: Captures media metadata from any app using the MPRIS D-Bus interface.
+**What it does**: Captures media metadata from any app using the MPRIS D-Bus interface — the primary desktop detection source on Linux. Starts automatically with `show-tracker run` on Linux (not WSL).
+
+#### Verification
 
 1. Verify D-Bus is running:
    ```bash
    echo $DBUS_SESSION_BUS_ADDRESS
    # Should print: unix:path=/run/user/1000/bus (or similar)
+   # If empty: D-Bus session bus is not available (common on headless servers and WSL)
    ```
-2. Start `show-tracker run`
-3. Play a TV show file in VLC or mpv
-4. Watch log for `mpris` or `media_session` entries
-5. Pause/resume → verify state change events
-6. List active MPRIS players:
+
+2. Verify `dbus-next` is installed:
+   ```bash
+   pip show dbus-next
+   ```
+   If missing: `pip install -e ".[linux]"`
+
+3. List active MPRIS players:
    ```bash
    dbus-send --session --dest=org.freedesktop.DBus --type=method_call \
      --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames \
      | grep mpris
+   # Should show entries like: org.mpris.MediaPlayer2.vlc
    ```
-7. **Troubleshooting**:
-   - Verify `dbus-next` installed: `pip show dbus-next`
+
+4. Quick smoke test:
+   ```bash
+   python -c "
+   import asyncio
+   from show_tracker.detection.mpris_listener import MPRISListener
+
+   async def test():
+       listener = MPRISListener()
+       listener.register_callback(lambda e: print(f'  Got: {e.title} [{e.playback_status.value}]'))
+       await listener.start()
+       print('Listening for 15 seconds... play something in VLC/mpv')
+       await asyncio.sleep(15)
+       await listener.stop()
+
+   asyncio.run(test())
+   "
+   ```
+
+#### Full test procedure
+
+1. Start `show-tracker run`
+2. Play a TV show file in VLC or mpv
+3. Watch log for `mpris` or `media_session` entries
+4. Pause/resume → verify state change events
+5. **Troubleshooting**:
    - On Wayland: MPRIS works via D-Bus regardless of display server
    - Check logs for `dbus` import errors
+   - On WSL: MPRIS is not available (no D-Bus session bus)
 
 ### 2c. Browser Extension — Chrome
 

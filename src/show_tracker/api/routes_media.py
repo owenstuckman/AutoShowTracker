@@ -6,6 +6,7 @@ exposes the current detection state.
 
 from __future__ import annotations
 
+import logging
 import time
 
 from fastapi import APIRouter, Request
@@ -15,6 +16,8 @@ from show_tracker.api.schemas import (
     MediaEventIn,
     MediaEventResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["media"])
 
@@ -30,8 +33,9 @@ async def receive_media_event(
     """Receive a media event from the browser extension.
 
     The extension sends play/pause/ended/heartbeat/page_load events with
-    rich metadata scraped from the page.  This endpoint stores the current
-    state and (in the future) feeds the identification pipeline.
+    rich metadata scraped from the page.  This endpoint updates the
+    currently-watching state and feeds the event into the detection
+    service for identification and persistence.
     """
     global _current_state
 
@@ -51,8 +55,15 @@ async def receive_media_event(
     else:
         _current_state["is_watching"] = True
 
-    # TODO: Feed event into the identification pipeline for automatic
-    #       episode resolution and watch-event creation.
+    # Feed event into the detection service for dedup, routing, and
+    # downstream identification/persistence.
+    detection = getattr(request.app.state, "detection", None)
+    if detection is not None:
+        try:
+            payload = event.model_dump(by_alias=True)
+            detection.handle_browser_event(payload)
+        except Exception:
+            logger.exception("Error feeding browser event to DetectionService")
 
     return MediaEventResponse(status="ok", message=f"Received {event.type} event")
 
