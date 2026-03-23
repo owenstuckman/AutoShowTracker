@@ -132,10 +132,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             or event.url
         )
         if not raw_string:
+            logger.info("Persist: skipped — no raw string from event")
             return
 
-        logger.debug(
-            "Persist callback: raw=%r source=%s tier=%s url=%s",
+        logger.info(
+            "Persist: raw=%r source=%s tier=%s url=%s",
             raw_string[:80], event.source, tier.value if tier else "?",
             (event.url or "")[:80],
         )
@@ -144,7 +145,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         if _is_youtube_url(event.url):
             video_id = _extract_youtube_video_id(event.url)
             if not video_id:
-                logger.debug("YouTube URL but no video ID: %s", event.url)
+                logger.info("Persist: YouTube URL but no video ID: %s", event.url)
                 return
             title = (
                 event.media_title
@@ -170,7 +171,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # -- TV episode identification ----------------------------------------
         # Skip if no TMDb key configured — can't identify without it.
         if not _settings.has_tmdb_key():
-            logger.debug("No TMDb key — skipping identification for %r", raw_string[:60])
+            logger.info("Persist: no TMDb key — skipping identification for %r", raw_string[:60])
             return
 
         try:
@@ -241,8 +242,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                         result.confidence,
                     )
                 else:
-                    logger.debug(
-                        "Skipped: %r (tier=%s, tmdb_show=%s, season=%s, ep=%s, conf=%.2f)",
+                    logger.info(
+                        "Persist: no match — %r (tier=%s, tmdb_show=%s, season=%s, ep=%s, conf=%.2f)",
                         raw_string[:60], tier.value if tier else "?",
                         result.tmdb_show_id, result.season, result.episode,
                         result.confidence,

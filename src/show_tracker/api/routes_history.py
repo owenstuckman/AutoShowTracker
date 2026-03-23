@@ -21,7 +21,7 @@ from show_tracker.api.schemas import (
     WatchStats,
     WeekWatchTime,
 )
-from show_tracker.storage.models import Episode, Show, WatchEvent
+from show_tracker.storage.models import Episode, Show, WatchEvent, YouTubeWatch
 
 router = APIRouter(prefix="/api/history", tags=["history"])
 
@@ -360,6 +360,15 @@ async def get_stats(request: Request) -> WatchStats:
             .scalar()
         ) or 0
 
+        # YouTube totals
+        yt_count = session.query(func.count(YouTubeWatch.id)).scalar() or 0
+        yt_time = (
+            session.query(
+                func.coalesce(func.sum(YouTubeWatch.watched_seconds), 0)
+            ).scalar()
+            or 0
+        )
+
         # By show
         by_show_rows = (
             session.query(
@@ -388,10 +397,12 @@ async def get_stats(request: Request) -> WatchStats:
             .all()
         )
 
+        episode_time = totals.total_time if totals else 0
         return WatchStats(
-            total_watch_time_seconds=totals.total_time if totals else 0,
+            total_watch_time_seconds=episode_time + yt_time,
             total_episodes_watched=totals.total_episodes if totals else 0,
             total_shows=total_shows,
+            total_youtube_watches=yt_count,
             by_show=[
                 ShowWatchTime(
                     show_id=r.id,

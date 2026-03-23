@@ -142,6 +142,7 @@ class WatchStats(BaseModel):
     total_watch_time_seconds: int = 0
     total_episodes_watched: int = 0
     total_shows: int = 0
+    total_youtube_watches: int = 0
     by_show: list[ShowWatchTime] = Field(default_factory=list)
     by_week: list[WeekWatchTime] = Field(default_factory=list)
 

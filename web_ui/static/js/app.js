@@ -252,6 +252,7 @@ async function renderDashboard() {
             <div class="stat-card"><div class="stat-value">--</div><div class="stat-label">Total Watch Time</div></div>
             <div class="stat-card"><div class="stat-value">--</div><div class="stat-label">Episodes</div></div>
             <div class="stat-card"><div class="stat-value">--</div><div class="stat-label">Shows</div></div>
+            <div class="stat-card"><div class="stat-value">--</div><div class="stat-label">YouTube</div></div>
         </div>
         <div class="dashboard-grid">
             <div class="card">
@@ -263,13 +264,21 @@ async function renderDashboard() {
                 <div id="nextUpList"><div class="loading-state"><div class="spinner"></div></div></div>
             </div>
         </div>
+        <div class="card" style="margin-top:20px">
+            <div class="card-header">
+                <span class="card-title">Recent YouTube</span>
+                <a href="#youtube" style="font-size:12px">View all</a>
+            </div>
+            <div id="recentYouTube"><div class="loading-state"><div class="spinner"></div></div></div>
+        </div>
     `;
 
     // Load data in parallel
-    const [statsData, recentData, nextData] = await Promise.all([
+    const [statsData, recentData, nextData, ytRecent] = await Promise.all([
         API.stats().catch(() => null),
         API.recentHistory(10).catch(() => []),
         API.nextToWatch().catch(() => []),
+        API.youtubeRecent(5).catch(() => []),
     ]);
 
     // Stats
@@ -286,6 +295,10 @@ async function renderDashboard() {
             <div class="stat-card">
                 <div class="stat-value">${statsData.total_shows}</div>
                 <div class="stat-label">Shows Tracked</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${statsData.total_youtube_watches}</div>
+                <div class="stat-label">YouTube Videos</div>
             </div>
         `;
     }
@@ -336,6 +349,26 @@ async function renderDashboard() {
         `
             )
             .join("")}</div>`;
+    }
+
+    // Recent YouTube
+    const ytEl = document.getElementById("recentYouTube");
+    if (ytEl) {
+        if (!ytRecent || ytRecent.length === 0) {
+            ytEl.innerHTML = `<div class="empty-state"><p class="empty-state-text">No YouTube watches yet.</p></div>`;
+        } else {
+            ytEl.innerHTML = `<div class="yt-video-list">${ytRecent.map((v) => `
+                <div class="yt-video-item">
+                    <div class="yt-video-info">
+                        <div class="yt-video-title">${escapeHtml(v.title)}</div>
+                        <div class="yt-video-meta">
+                            ${v.channel_name ? escapeHtml(v.channel_name) + " &middot; " : ""}${formatTimeAgo(v.started_at)}
+                        </div>
+                    </div>
+                    <a class="btn btn-sm btn-secondary" href="https://youtube.com/watch?v=${encodeURIComponent(v.video_id)}" target="_blank" rel="noopener">Open</a>
+                </div>
+            `).join("")}</div>`;
+        }
     }
 
     // Currently watching
@@ -874,7 +907,8 @@ async function renderStats() {
 // ---------------------------------------------------------------------------
 
 async function renderYouTube() {
-    content().innerHTML = `
+    const el = content();
+    el.innerHTML = `
         <div class="page-header">
             <h1 class="page-title">YouTube</h1>
             <p class="page-subtitle">Tracked YouTube video watches</p>
@@ -890,14 +924,21 @@ async function renderYouTube() {
         </div>
     `;
 
-    const [stats, recent] = await Promise.all([
-        API.youtubeStats().catch(() => null),
-        API.youtubeRecent(50).catch(() => []),
-    ]);
+    let stats = null;
+    let recent = [];
+    try {
+        [stats, recent] = await Promise.all([
+            API.youtubeStats().catch(() => null),
+            API.youtubeRecent(50).catch(() => []),
+        ]);
+    } catch (err) {
+        console.error("YouTube data load error:", err);
+    }
 
     // Stats
-    if (stats) {
-        document.getElementById("ytStatCards").innerHTML = `
+    const statEl = document.getElementById("ytStatCards");
+    if (statEl && stats) {
+        statEl.innerHTML = `
             <div class="stat-card">
                 <div class="stat-value">${stats.total_watches}</div>
                 <div class="stat-label">Total Watches</div>
@@ -915,7 +956,9 @@ async function renderYouTube() {
 
     // Recent list
     const listEl = document.getElementById("ytList");
-    if (recent.length === 0) {
+    if (!listEl) return;
+
+    if (!recent || recent.length === 0) {
         listEl.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">&#9655;</div>
@@ -925,16 +968,17 @@ async function renderYouTube() {
         return;
     }
 
-    listEl.innerHTML = `<ul class="recent-list">${recent.map((v) => `
-        <li class="recent-item">
-            <div class="recent-episode">
-                <div class="recent-show">${escapeHtml(v.title)}</div>
-                <div class="recent-ep">${v.channel_name ? escapeHtml(v.channel_name) : v.video_id}${v.duration_seconds ? " \u00b7 " + formatDuration(v.duration_seconds) : ""}</div>
+    listEl.innerHTML = `<div class="yt-video-list">${recent.map((v) => `
+        <div class="yt-video-item">
+            <div class="yt-video-info">
+                <div class="yt-video-title">${escapeHtml(v.title)}</div>
+                <div class="yt-video-meta">
+                    ${v.channel_name ? escapeHtml(v.channel_name) + " &middot; " : ""}${formatTimeAgo(v.started_at)}${v.duration_seconds ? " &middot; " + formatDuration(v.duration_seconds) : ""}
+                </div>
             </div>
-            <a class="recent-badge completed" href="https://youtube.com/watch?v=${encodeURIComponent(v.video_id)}" target="_blank" rel="noopener" style="text-decoration:none">Watch</a>
-            <span class="recent-time">${formatTimeAgo(v.started_at)}</span>
-        </li>
-    `).join("")}</ul>`;
+            <a class="btn btn-sm btn-secondary" href="https://youtube.com/watch?v=${encodeURIComponent(v.video_id)}" target="_blank" rel="noopener">Open</a>
+        </div>
+    `).join("")}</div>`;
 }
 
 // ---------------------------------------------------------------------------

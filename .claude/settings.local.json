@@ -16,7 +16,10 @@
       "Bash(pip install:*)",
       "Bash(pip3 install:*)",
       "Bash(python -c \"import ast; ast.parse\\(open\\(''src/show_tracker/api/app.py''\\).read\\(\\)\\); print\\(''app.py OK''\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\(''src/show_tracker/api/routes_media.py''\\).read\\(\\)\\); print\\(''routes_media.py OK''\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''src/show_tracker/api/routes_media.py''\\).read\\(\\)\\); print\\(''routes_media.py OK''\\)\")",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\(''src/show_tracker/api/routes_history.py''\\).read\\(\\)\\); print\\(''routes_history.py OK''\\)\")",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\(''src/show_tracker/api/schemas.py''\\).read\\(\\)\\); print\\(''schemas.py OK''\\)\")",
+      "Bash(node --check web_ui/static/js/app.js)"
     ]
   }
 }
