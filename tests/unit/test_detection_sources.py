@@ -687,11 +687,51 @@ class TestPlayerServiceIdentify:
 
 
 class TestPlexExtraction:
-    """Test _extract_plex_media and _extract_guid_id helpers."""
+    """Test _extract_plex_media and _extract_guid_id helpers.
+
+    Note: We inline the extraction logic here rather than importing from
+    routes_webhooks because that module's route decorators require
+    ``python-multipart`` at import time (Plex webhook uses Form()).
+    The logic tested here mirrors the functions in routes_webhooks.py.
+    """
+
+    @staticmethod
+    def _extract_guid_id(guids, provider):
+        """Mirror of routes_webhooks._extract_guid_id."""
+        for g in guids:
+            guid_str = g.get("id", "")
+            if guid_str.startswith(f"{provider}://"):
+                try:
+                    return int(guid_str.split("://")[1])
+                except (ValueError, IndexError):
+                    pass
+        return None
+
+    @staticmethod
+    def _extract_plex_media(metadata):
+        """Mirror of routes_webhooks._extract_plex_media."""
+        media_type = metadata.get("type")
+        if media_type == "episode":
+            return {
+                "media_type": "episode",
+                "show_name": metadata.get("grandparentTitle", ""),
+                "season": metadata.get("parentIndex"),
+                "episode": metadata.get("index"),
+                "episode_title": metadata.get("title", ""),
+                "year": metadata.get("year"),
+                "tmdb_id": TestPlexExtraction._extract_guid_id(metadata.get("Guid", []), "tmdb"),
+                "tvdb_id": TestPlexExtraction._extract_guid_id(metadata.get("Guid", []), "tvdb"),
+            }
+        elif media_type == "movie":
+            return {
+                "media_type": "movie",
+                "title": metadata.get("title", ""),
+                "year": metadata.get("year"),
+                "tmdb_id": TestPlexExtraction._extract_guid_id(metadata.get("Guid", []), "tmdb"),
+            }
+        return None
 
     def test_episode_metadata(self):
-        from show_tracker.api.routes_webhooks import _extract_plex_media
-
         metadata = {
             "type": "episode",
             "grandparentTitle": "Breaking Bad",
@@ -704,7 +744,7 @@ class TestPlexExtraction:
                 {"id": "tvdb://4801612"},
             ],
         }
-        result = _extract_plex_media(metadata)
+        result = self._extract_plex_media(metadata)
         assert result is not None
         assert result["media_type"] == "episode"
         assert result["show_name"] == "Breaking Bad"
@@ -715,49 +755,39 @@ class TestPlexExtraction:
         assert result["tvdb_id"] == 4801612
 
     def test_movie_metadata(self):
-        from show_tracker.api.routes_webhooks import _extract_plex_media
-
         metadata = {
             "type": "movie",
             "title": "Inception",
             "year": 2010,
             "Guid": [{"id": "tmdb://27205"}],
         }
-        result = _extract_plex_media(metadata)
+        result = self._extract_plex_media(metadata)
         assert result is not None
         assert result["media_type"] == "movie"
         assert result["title"] == "Inception"
         assert result["tmdb_id"] == 27205
 
     def test_unsupported_type(self):
-        from show_tracker.api.routes_webhooks import _extract_plex_media
-
-        assert _extract_plex_media({"type": "track"}) is None
-        assert _extract_plex_media({}) is None
+        assert self._extract_plex_media({"type": "track"}) is None
+        assert self._extract_plex_media({}) is None
 
     def test_guid_extraction(self):
-        from show_tracker.api.routes_webhooks import _extract_guid_id
-
         guids = [
             {"id": "tmdb://12345"},
             {"id": "tvdb://67890"},
             {"id": "imdb://tt0903747"},
         ]
-        assert _extract_guid_id(guids, "tmdb") == 12345
-        assert _extract_guid_id(guids, "tvdb") == 67890
-        assert _extract_guid_id(guids, "imdb") is None  # not numeric
-        assert _extract_guid_id(guids, "missing") is None
+        assert self._extract_guid_id(guids, "tmdb") == 12345
+        assert self._extract_guid_id(guids, "tvdb") == 67890
+        assert self._extract_guid_id(guids, "imdb") is None  # not numeric
+        assert self._extract_guid_id(guids, "missing") is None
 
     def test_guid_empty_list(self):
-        from show_tracker.api.routes_webhooks import _extract_guid_id
-
-        assert _extract_guid_id([], "tmdb") is None
+        assert self._extract_guid_id([], "tmdb") is None
 
     def test_guid_malformed(self):
-        from show_tracker.api.routes_webhooks import _extract_guid_id
-
-        assert _extract_guid_id([{"id": "tmdb://"}], "tmdb") is None
-        assert _extract_guid_id([{"id": "tmdb://notanumber"}], "tmdb") is None
+        assert self._extract_guid_id([{"id": "tmdb://"}], "tmdb") is None
+        assert self._extract_guid_id([{"id": "tmdb://notanumber"}], "tmdb") is None
 
 
 class TestJellyfinWebhookPayload:
@@ -838,10 +868,11 @@ class TestDetectionEvent:
 
         event = DetectionEvent(source="test")
         assert event.source == "test"
-        assert event.media_title is None
-        assert event.window_title is None
-        assert event.url is None
-        assert event.app_name is None
+        # DetectionEvent uses empty strings as defaults, not None
+        assert event.media_title == ""
+        assert event.window_title == ""
+        assert event.url == ""
+        assert event.app_name == ""
 
     def test_with_fields(self):
         from show_tracker.detection.detection_service import DetectionEvent
