@@ -132,7 +132,7 @@ class Settings(BaseSettings):
         return Path(v).expanduser().resolve()
 
     @model_validator(mode="after")
-    def _check_thresholds(self) -> "Settings":
+    def _check_thresholds(self) -> Settings:
         if self.review_threshold > self.auto_log_threshold:
             msg = (
                 f"review_threshold ({self.review_threshold}) must be <= "

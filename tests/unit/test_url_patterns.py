@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
-from show_tracker.identification.url_patterns import UrlMatchResult, match_url
+from show_tracker.identification.url_patterns import match_url
 
 
 class TestNetflix:

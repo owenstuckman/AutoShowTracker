@@ -394,7 +394,6 @@ class EpisodeResolver:
         )
 
         try:
-            from show_tracker.identification.tvdb_client import TVDbError
 
             # Search TVDb
             results = self.tvdb.search(title_query, search_type="series")

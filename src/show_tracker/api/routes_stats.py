@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import func, text
+from sqlalchemy import Integer, func, text
 
 from show_tracker.storage.models import Episode, Show, WatchEvent
 
@@ -247,7 +247,7 @@ async def get_viewing_patterns(request: Request) -> ViewingPattern:
         # Hour distribution (SQLite strftime %H = hour 00-23)
         hour_rows = (
             session.query(
-                func.cast(func.strftime("%H", WatchEvent.started_at), type_=func.integer()).label("hour"),
+                func.cast(func.strftime("%H", WatchEvent.started_at), type_=Integer).label("hour"),
                 func.count(WatchEvent.id).label("cnt"),
             )
             .group_by(text("hour"))
@@ -262,7 +262,7 @@ async def get_viewing_patterns(request: Request) -> ViewingPattern:
         # Weekday distribution (SQLite strftime %w: 0=Sunday, 1=Monday, ...)
         day_rows = (
             session.query(
-                func.cast(func.strftime("%w", WatchEvent.started_at), type_=func.integer()).label("dow"),
+                func.cast(func.strftime("%w", WatchEvent.started_at), type_=Integer).label("dow"),
                 func.count(WatchEvent.id).label("cnt"),
             )
             .group_by(text("dow"))

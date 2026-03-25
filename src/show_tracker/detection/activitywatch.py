@@ -12,10 +12,10 @@ import os
 import socket
 import subprocess
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +221,8 @@ class ActivityWatchClient:
         """Return all available buckets as a mapping of id -> metadata."""
         resp = requests.get(f"{self.base}/buckets", timeout=5)
         resp.raise_for_status()
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result
 
     def get_recent_window_events(self, hostname: str, limit: int = 5) -> list[dict[str, Any]]:
         """Get recent window watcher events."""
@@ -246,7 +247,7 @@ class ActivityWatchClient:
         """Get all events in *bucket_id* after *since*."""
         params = {
             "start": since.isoformat(),
-            "end": datetime.now(timezone.utc).isoformat(),
+            "end": datetime.now(UTC).isoformat(),
         }
         resp = requests.get(
             f"{self.base}/buckets/{bucket_id}/events",
@@ -254,7 +255,8 @@ class ActivityWatchClient:
             timeout=5,
         )
         resp.raise_for_status()
-        return resp.json()
+        result: list[dict[str, Any]] = resp.json()
+        return result
 
     # -- internal -----------------------------------------------------------
 
@@ -269,7 +271,8 @@ class ActivityWatchClient:
             timeout=5,
         )
         resp.raise_for_status()
-        return resp.json()
+        result: list[dict[str, Any]] = resp.json()
+        return result
 
 
 # ---------------------------------------------------------------------------
@@ -366,7 +369,7 @@ class MockActivityWatchClient:
             data["url"] = url
         self.mock_events.append(
             {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "duration": duration,
                 "data": data,
             }

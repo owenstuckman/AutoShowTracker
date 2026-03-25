@@ -9,7 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Query, Request
 from sqlalchemy import func
 
-from show_tracker.api.schemas import YouTubeWatchOut, YouTubeStats
+from show_tracker.api.schemas import YouTubeStats, YouTubeWatchOut
 from show_tracker.storage.models import YouTubeWatch
 
 router = APIRouter(prefix="/api/youtube", tags=["youtube"])

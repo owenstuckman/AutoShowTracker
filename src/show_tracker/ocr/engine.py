@@ -90,7 +90,7 @@ def preprocess(
         scale = _MIN_WIDTH_PX / gray.width
         new_w = int(gray.width * scale)
         new_h = int(gray.height * scale)
-        gray = gray.resize((new_w, new_h), Image.LANCZOS)
+        gray = gray.resize((new_w, new_h), Image.LANCZOS)  # type: ignore[attr-defined]
         logger.debug("Upscaled image to %dx%d (%.1fx)", new_w, new_h, scale)
 
     # 3. Invert for dark themes
@@ -120,9 +120,9 @@ def _detect_dark_theme(image: Image.Image) -> bool:
     border_pixels: list[int] = []
     for x in range(w):
         for y in range(min(5, h)):
-            border_pixels.append(gray.getpixel((x, y)))
+            border_pixels.append(int(gray.getpixel((x, y))))
         for y in range(max(0, h - 5), h):
-            border_pixels.append(gray.getpixel((x, y)))
+            border_pixels.append(int(gray.getpixel((x, y))))
 
     if not border_pixels:
         return False
@@ -149,7 +149,7 @@ class TesseractEngine(OCREngine):
             block of text, which works well for title bars.
         """
         try:
-            import pytesseract  # noqa: F401
+            import pytesseract  # type: ignore[import-not-found]  # noqa: F401
         except ImportError:
             raise ImportError(
                 "pytesseract is required for TesseractEngine. "
@@ -226,7 +226,7 @@ class EasyOCREngine(OCREngine):
             Whether to use GPU acceleration.
         """
         try:
-            import easyocr  # noqa: F401
+            import easyocr  # type: ignore[import-not-found]  # noqa: F401
         except ImportError:
             raise ImportError(
                 "easyocr is required for EasyOCREngine. "
@@ -249,7 +249,7 @@ class EasyOCREngine(OCREngine):
         return self._reader
 
     def extract_text(self, image: Image.Image) -> list[OCRResult]:
-        import numpy as np
+        import numpy as np  # type: ignore[import-not-found]
 
         is_dark = _detect_dark_theme(image)
         processed = preprocess(image, invert=is_dark)

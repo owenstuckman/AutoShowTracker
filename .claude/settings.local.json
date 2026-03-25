@@ -19,7 +19,8 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\(''src/show_tracker/api/routes_media.py''\\).read\\(\\)\\); print\\(''routes_media.py OK''\\)\")",
       "Bash(python3 -c \"import ast; ast.parse\\(open\\(''src/show_tracker/api/routes_history.py''\\).read\\(\\)\\); print\\(''routes_history.py OK''\\)\")",
       "Bash(python3 -c \"import ast; ast.parse\\(open\\(''src/show_tracker/api/schemas.py''\\).read\\(\\)\\); print\\(''schemas.py OK''\\)\")",
-      "Bash(node --check web_ui/static/js/app.js)"
+      "Bash(node --check web_ui/static/js/app.js)",
+      "Bash(grep -r \"privacy\\\\|PRIVACY\" /mnt/c/Users/ostuc/Documents/GitHub/AutoShowTracker --include=*.md --include=*.html)"
     ]
   }
 }

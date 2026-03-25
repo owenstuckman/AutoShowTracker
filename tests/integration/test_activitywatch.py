@@ -6,10 +6,9 @@ through detection service, episode resolver, and watch history storage.
 
 from __future__ import annotations
 
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from datetime import UTC, datetime
 
+import pytest
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -18,7 +17,7 @@ from unittest.mock import MagicMock, patch
 @pytest.fixture
 def mock_aw_events():
     """Sample ActivityWatch window-watcher events."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return [
         {
             "id": 1,
@@ -53,7 +52,7 @@ def mock_aw_events():
 @pytest.fixture
 def mock_aw_browser_events():
     """Browser-watcher events with URL info."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return [
         {
             "id": 10,

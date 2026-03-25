@@ -8,10 +8,11 @@ sessions and encapsulate all query logic.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
-from typing import Any, Sequence
+from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from show_tracker.storage.models import (
@@ -28,7 +29,6 @@ from show_tracker.storage.models import (
     YouTubeWatch,
     _utcnow,
 )
-
 
 # ===================================================================
 # WatchRepository — operates on watch_history.db
@@ -198,7 +198,7 @@ class WatchRepository:
         """
         now = _utcnow()
         cutoff = (
-            datetime.now(timezone.utc) - timedelta(minutes=gap_threshold_minutes)
+            datetime.now(UTC) - timedelta(minutes=gap_threshold_minutes)
         ).strftime("%Y-%m-%d %H:%M:%S")
 
         # Find the most recent open event for this episode within the gap
@@ -503,11 +503,11 @@ class CacheRepository:
             expiry_hours = CacheRepository.DEFAULT_EXPIRY_HOURS
         try:
             fetched = datetime.strptime(fetched_at, "%Y-%m-%d %H:%M:%S").replace(
-                tzinfo=timezone.utc
+                tzinfo=UTC
             )
         except ValueError:
             return False
-        return datetime.now(timezone.utc) - fetched < timedelta(hours=expiry_hours)
+        return datetime.now(UTC) - fetched < timedelta(hours=expiry_hours)
 
     # ----- Search cache ----------------------------------------------
 
@@ -526,7 +526,8 @@ class CacheRepository:
         entry = self._session.get(TMDbSearchCache, query)
         if entry is None or not self.is_cache_fresh(entry.fetched_at, expiry_hours):
             return None
-        return json.loads(entry.result_tmdb_ids)
+        result: list[int] = json.loads(entry.result_tmdb_ids)
+        return result
 
     def cache_search(self, query: str, tmdb_ids: list[int]) -> TMDbSearchCache:
         """Store or update a search-result cache entry."""
@@ -554,7 +555,8 @@ class CacheRepository:
         entry = self._session.get(TMDbShowCache, tmdb_id)
         if entry is None or not self.is_cache_fresh(entry.fetched_at, expiry_hours):
             return None
-        return json.loads(entry.data)
+        result: dict[str, Any] = json.loads(entry.data)
+        return result
 
     def cache_show(self, tmdb_id: int, data: dict[str, Any]) -> TMDbShowCache:
         """Store or update a show cache entry."""
@@ -582,7 +584,8 @@ class CacheRepository:
         entry = self._session.get(TMDbEpisodeCache, tmdb_episode_id)
         if entry is None or not self.is_cache_fresh(entry.fetched_at, expiry_hours):
             return None
-        return json.loads(entry.data)
+        result: dict[str, Any] = json.loads(entry.data)
+        return result
 
     def cache_episode(
         self,

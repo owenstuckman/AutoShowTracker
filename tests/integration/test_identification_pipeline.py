@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Sequence
 
 import pytest
 
@@ -313,4 +312,4 @@ class TestIdentificationPipeline:
         report = "\n".join(report_lines)
         logger.info(report)
         # Print to stdout so pytest -s shows it
-        print(report)  # noqa: T201
+        print(report)

@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from show_tracker.storage.models import Show, UserSetting, WatchEvent, Episode
+from show_tracker.storage.models import Episode, Show, UserSetting, WatchEvent
 
 if TYPE_CHECKING:
     from show_tracker.storage.database import DatabaseManager
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def check_new_episodes(
     db: DatabaseManager,
     tmdb_api_key: str,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Check TMDb for new episodes airing today or tomorrow.
 
     Only checks shows that the user has watched at least one episode of.
@@ -34,7 +34,7 @@ def check_new_episodes(
 
     today = date.today()
     tomorrow = today + timedelta(days=1)
-    upcoming: list[dict] = []
+    upcoming: list[dict[str, Any]] = []
 
     with db.get_watch_session() as session:
         # Get shows the user is actively watching (has watch events)
@@ -96,7 +96,7 @@ def send_notification(title: str, message: str) -> bool:
     Returns True if the notification was sent successfully.
     """
     try:
-        from plyer import notification
+        from plyer import notification  # type: ignore[import-not-found]
 
         notification.notify(
             title=title,

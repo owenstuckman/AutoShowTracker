@@ -106,13 +106,15 @@ class MpvClient:
 
         Tries ``media-title`` first, then falls back to ``filename``.
         """
-        title = self.get_property("media-title")
+        title: Any = self.get_property("media-title")
         if title and isinstance(title, str) and title.strip():
-            return title.strip()
+            result: str = title.strip()
+            return result
 
-        filename = self.get_property("filename")
+        filename: Any = self.get_property("filename")
         if filename and isinstance(filename, str):
-            return filename.strip()
+            result = filename.strip()
+            return result
 
         return None
 
@@ -222,11 +224,11 @@ class MpvClient:
 
             # Match by request_id if available
             if request_id is not None and obj.get("request_id") == request_id:
-                return obj
+                return dict(obj)
 
             # If no request_id filtering, return the first valid response
             if request_id is None and "error" in obj:
-                return obj
+                return dict(obj)
 
         # Return the last parsed object as a fallback
         for line in reversed(data.decode("utf-8", errors="replace").splitlines()):
@@ -234,7 +236,7 @@ class MpvClient:
             if not line:
                 continue
             try:
-                return json.loads(line)
+                return dict(json.loads(line))
             except json.JSONDecodeError:
                 continue
 

@@ -12,10 +12,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 from show_tracker.detection.activitywatch import (
     ActivityWatchClient,
@@ -28,7 +29,6 @@ from show_tracker.detection.media_session import (
     MediaSessionEvent,
     MediaSessionListener,
     PlaybackStatus,
-    get_media_listener,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ class DetectionEvent:
     ActivityWatch, SMTC/MPRIS, or the browser extension.
     """
 
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     source: str = ""  # "activitywatch_window", "activitywatch_web", "smtc", "mpris", "browser"
 
     # Raw text signals (at least one will be populated).
@@ -327,7 +327,7 @@ class DetectionService:
                     self._event_queue.get(),
                     timeout=1.0,
                 )
-            except (asyncio.TimeoutError, asyncio.CancelledError):
+            except (TimeoutError, asyncio.CancelledError):
                 if not self._running:
                     return
                 continue
@@ -497,7 +497,7 @@ class DetectionService:
         try:
             ts = datetime.fromisoformat(ts_str)
         except (ValueError, TypeError):
-            ts = datetime.now(timezone.utc)
+            ts = datetime.now(UTC)
 
         return DetectionEvent(
             timestamp=ts,
@@ -515,7 +515,7 @@ class DetectionService:
         try:
             ts = datetime.fromisoformat(ts_str)
         except (ValueError, TypeError):
-            ts = datetime.now(timezone.utc)
+            ts = datetime.now(UTC)
 
         return DetectionEvent(
             timestamp=ts,

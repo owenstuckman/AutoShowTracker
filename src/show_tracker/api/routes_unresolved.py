@@ -6,6 +6,8 @@ unresolved media detection events that need manual review.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, Request
 
 from show_tracker.api.schemas import (
@@ -60,7 +62,7 @@ async def resolve_event(
     event_id: int,
     body: ResolveRequest,
     request: Request,
-) -> dict:
+) -> dict[str, Any]:
     """Manually assign an unresolved event to a specific show/episode.
 
     If the episode does not exist in the database, it will be created.
@@ -119,7 +121,7 @@ async def resolve_event(
 # ---------------------------------------------------------------------------
 
 @router.post("/{event_id}/dismiss")
-async def dismiss_event(event_id: int, request: Request) -> dict:
+async def dismiss_event(event_id: int, request: Request) -> dict[str, Any]:
     """Dismiss an unresolved event without assigning it to an episode."""
     db = request.app.state.db
     with db.get_watch_session() as session:

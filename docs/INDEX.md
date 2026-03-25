@@ -16,7 +16,8 @@
 | [Architecture](ARCHITECTURE.md) | System architecture, data flow, detection priority, confidence scoring |
 | [ActivityWatch](ACTIVITYWATCH.md) | ActivityWatch integration: subprocess management, polling, event flow |
 | [Decisions](DECISIONS.md) | Numbered implementation decision log (D001–D013) |
-| [TODO](TODO.md) | Project status — what's done and what's left |
+| [Features](FEATURES.md) | Completed features — everything implemented and working |
+| [TODO](TODO.md) | What's left — CI fixes, missing functionality, test coverage |
 
 ## Design Specifications
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlparse
 
@@ -32,7 +32,7 @@ class BrowserMediaEvent:
     regardless of which metadata source provided the information.
     """
 
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     event_type: str = "page_load"  # play | pause | ended | heartbeat | page_load
     url: str = ""
     domain: str = ""
@@ -263,10 +263,10 @@ class BrowserEventHandler:
         parsed_url = urlparse(tab_url)
         domain = parsed_url.netloc.removeprefix("www.")
 
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
         if timestamp_ms is not None:
             try:
-                timestamp = datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=timezone.utc)
+                timestamp = datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
             except (ValueError, TypeError, OSError):
                 pass
 

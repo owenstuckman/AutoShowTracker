@@ -156,15 +156,17 @@ def seed_aliases(db_session: Session) -> int:
         if canonical_title in show_cache:
             show = show_cache[canonical_title]
         else:
-            show = (
+            show_or_none = (
                 db_session.query(Show)
                 .filter(Show.title == canonical_title)
                 .first()
             )
-            if show is None:
+            if show_or_none is None:
                 show = Show(title=canonical_title)
                 db_session.add(show)
                 db_session.flush()  # materialise the id
+            else:
+                show = show_or_none
             show_cache[canonical_title] = show
 
         db_session.add(

@@ -7,9 +7,10 @@ Manages two SQLite databases:
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
+from typing import Any
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
@@ -18,14 +19,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from show_tracker.storage.models import CacheBase, WatchBase
 
 
-def _enable_sqlite_fk(dbapi_conn, connection_record) -> None:  # noqa: ANN001
+def _enable_sqlite_fk(dbapi_conn: Any, connection_record: Any) -> None:
     """Enable foreign key enforcement for every new SQLite connection."""
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA foreign_keys = ON")
     cursor.close()
 
 
-def _enable_wal(dbapi_conn, connection_record) -> None:  # noqa: ANN001
+def _enable_wal(dbapi_conn: Any, connection_record: Any) -> None:
     """Enable WAL journal mode for better concurrent read performance."""
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA journal_mode = WAL")

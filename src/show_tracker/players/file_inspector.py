@@ -63,7 +63,7 @@ def find_media_player_pids(app_name: str) -> list[int]:
         Matching process IDs.
     """
     try:
-        import psutil
+        import psutil  # type: ignore[import-untyped]
     except ImportError:
         logger.warning("psutil is not installed; cannot scan for media player PIDs")
         return []
@@ -73,7 +73,7 @@ def find_media_player_pids(app_name: str) -> list[int]:
 
     for proc in psutil.process_iter(["pid", "name", "cmdline"]):
         try:
-            info = proc.info  # type: ignore[attr-defined]
+            info = proc.info
             proc_name = (info.get("name") or "").lower()
             cmdline = info.get("cmdline") or []
 
@@ -97,7 +97,7 @@ def find_media_player_pids(app_name: str) -> list[int]:
 def _inspect_via_psutil(pid: int) -> list[str]:
     """Use psutil to list open files for a process."""
     try:
-        import psutil
+        import psutil  # type: ignore[import-untyped]  # noqa: F811
     except ImportError:
         logger.debug("psutil not available for file inspection")
         return []

@@ -7,11 +7,19 @@ into canonical episode entries via parsing, URL matching, and TMDb resolution.
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from show_tracker.identification.confidence import calculate_confidence
-from show_tracker.identification.parser import ParseResult, parse_media_string, preprocess_for_guessit
-from show_tracker.identification.resolver import EpisodeResolver, IdentificationResult, MovieIdentificationResult
+from show_tracker.identification.parser import (
+    ParseResult,
+    parse_media_string,
+    preprocess_for_guessit,
+)
+from show_tracker.identification.resolver import (
+    EpisodeResolver,
+    IdentificationResult,
+    MovieIdentificationResult,
+)
 from show_tracker.identification.tmdb_client import TMDbClient
 from show_tracker.identification.url_patterns import UrlMatchResult, match_url
 
@@ -19,16 +27,16 @@ if TYPE_CHECKING:
     from show_tracker.config import Settings
 
 __all__ = [
-    "ParseResult",
-    "parse_media_string",
-    "preprocess_for_guessit",
-    "UrlMatchResult",
-    "match_url",
     "EpisodeResolver",
     "IdentificationResult",
-    "calculate_confidence",
     "MovieIdentificationResult",
+    "ParseResult",
+    "UrlMatchResult",
+    "calculate_confidence",
     "identify_media",
+    "match_url",
+    "parse_media_string",
+    "preprocess_for_guessit",
 ]
 
 
@@ -70,10 +78,10 @@ async def identify_media(
             media_type = parsed.content_type or "episode"
 
         if media_type == "movie":
-            result = resolver.resolve_movie(raw_string, source_type=source)
-            if result.tmdb_movie_id is None and result.confidence < 0.3:
+            movie_result = resolver.resolve_movie(raw_string, source_type=source)
+            if movie_result.tmdb_movie_id is None and movie_result.confidence < 0.3:
                 return None
-            out = asdict(result)
+            out = asdict(movie_result)
             out["media_type"] = "movie"
             return out
         else:
@@ -91,17 +99,17 @@ async def identify_media(
                 if yt_enriched:
                     # Use enriched data if it looks like a series
                     enriched_string = yt_enriched.get("enriched_string", raw_string)
-                    result = resolver.resolve(enriched_string, source_type="youtube", url=url)
-                    if result.tmdb_show_id is not None or result.confidence >= 0.3:
-                        out = asdict(result)
+                    ep_result = resolver.resolve(enriched_string, source_type="youtube", url=url)
+                    if ep_result.tmdb_show_id is not None or ep_result.confidence >= 0.3:
+                        out = asdict(ep_result)
                         out["media_type"] = "episode"
                         out["youtube_info"] = yt_enriched
                         return out
 
-            result = resolver.resolve(raw_string, source_type=source, url=url)
-            if result.tmdb_show_id is None and result.confidence < 0.3:
+            ep_result = resolver.resolve(raw_string, source_type=source, url=url)
+            if ep_result.tmdb_show_id is None and ep_result.confidence < 0.3:
                 return None
-            out = asdict(result)
+            out = asdict(ep_result)
             out["media_type"] = "episode"
             return out
     finally:

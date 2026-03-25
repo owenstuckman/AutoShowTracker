@@ -7,19 +7,19 @@ and manages database lifecycle via startup/shutdown events.
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from show_tracker import __version__
+from show_tracker.api.schemas import HealthResponse
 from show_tracker.config import load_settings
 from show_tracker.storage.database import DatabaseManager
-from show_tracker.api.schemas import HealthResponse
 
 logger = logging.getLogger(__name__)
 
@@ -97,13 +97,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # -- Persistence callback: identify and store watch events ---------------
 
+    import re as _re
+
     from show_tracker.detection.detection_service import ConfidenceTier
     from show_tracker.identification.resolver import EpisodeResolver
     from show_tracker.identification.tmdb_client import TMDbClient
-    from show_tracker.storage.repository import WatchRepository
     from show_tracker.storage.models import UnresolvedEvent, _utcnow
-
-    import re as _re
+    from show_tracker.storage.repository import WatchRepository
 
     def _is_youtube_url(url: str | None) -> bool:
         if not url:
@@ -305,13 +305,13 @@ app.add_middleware(
 # Include routers
 # ---------------------------------------------------------------------------
 
-from show_tracker.api.routes_media import router as media_router  # noqa: E402
-from show_tracker.api.routes_history import router as history_router  # noqa: E402
-from show_tracker.api.routes_unresolved import router as unresolved_router  # noqa: E402
-from show_tracker.api.routes_settings import router as settings_router  # noqa: E402
 from show_tracker.api.routes_export import router as export_router  # noqa: E402
-from show_tracker.api.routes_webhooks import router as webhooks_router  # noqa: E402
+from show_tracker.api.routes_history import router as history_router  # noqa: E402
+from show_tracker.api.routes_media import router as media_router  # noqa: E402
+from show_tracker.api.routes_settings import router as settings_router  # noqa: E402
 from show_tracker.api.routes_stats import router as stats_router  # noqa: E402
+from show_tracker.api.routes_unresolved import router as unresolved_router  # noqa: E402
+from show_tracker.api.routes_webhooks import router as webhooks_router  # noqa: E402
 from show_tracker.api.routes_youtube import router as youtube_router  # noqa: E402
 
 app.include_router(media_router)

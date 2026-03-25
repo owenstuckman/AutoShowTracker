@@ -28,8 +28,8 @@ if sys.platform != "linux":
     _DBUS_AVAILABLE = False
 else:
     try:
-        from dbus_next.aio import MessageBus  # type: ignore[import-untyped]
-        from dbus_next import Variant  # type: ignore[import-untyped]
+        from dbus_next import Variant  # type: ignore[import-not-found]
+        from dbus_next.aio import MessageBus  # type: ignore[import-not-found]
 
         _DBUS_AVAILABLE = True
     except ImportError:
@@ -111,7 +111,7 @@ class MPRISListener:
         if self._running:
             return
 
-        self._bus = await MessageBus().connect()  # type: ignore[union-attr]
+        self._bus = await MessageBus().connect()
         logger.info("Connected to session D-Bus")
 
         # Discover existing MPRIS players.

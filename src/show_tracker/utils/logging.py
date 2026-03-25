@@ -46,7 +46,7 @@ def setup_logging(
         only the console handler is attached (useful for tests and
         short-lived CLI invocations).
     """
-    global _CONFIGURED  # noqa: PLW0603
+    global _CONFIGURED
 
     if _CONFIGURED:
         return

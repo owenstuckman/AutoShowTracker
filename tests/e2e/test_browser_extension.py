@@ -18,15 +18,14 @@ The FastAPI server is started as a subprocess for the duration of the test sessi
 
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 import textwrap
 import time
+from collections.abc import Generator
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from threading import Thread
-from typing import Generator
 
 import pytest
 
@@ -50,7 +49,7 @@ class _TestPageHandler(SimpleHTTPRequestHandler):
 
     pages: dict[str, str] = {}
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         path = self.path.split("?")[0]
         if path in self.pages:
             body = self.pages[path].encode()
@@ -62,7 +61,7 @@ class _TestPageHandler(SimpleHTTPRequestHandler):
         else:
             self.send_error(404)
 
-    def log_message(self, format: str, *args: object) -> None:  # noqa: A002
+    def log_message(self, format: str, *args: object) -> None:
         pass  # suppress noisy logs during test runs
 
 

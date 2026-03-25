@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ class UrlMatchResult:
 
 # Each entry: (compiled regex, platform, id_type, extractor function)
 # The extractor receives the regex match object and returns a dict of UrlMatchResult fields.
-_URL_PATTERNS: list[tuple[re.Pattern[str], str, str, callable]] = [
+_URL_PATTERNS: list[tuple[re.Pattern[str], str, str, Callable[[re.Match[str]], dict[str, Any]]]] = [
     # Netflix: /watch/<content_id>
     (
         re.compile(r"netflix\.com/watch/(\d+)", re.IGNORECASE),
@@ -44,7 +46,7 @@ _URL_PATTERNS: list[tuple[re.Pattern[str], str, str, callable]] = [
     ),
     # Crunchyroll: /watch/<id>/<slug>
     (
-        re.compile(r"crunchyroll\.com/.*/watch/[^/]*/(.+?)(?:\?|$)", re.IGNORECASE),
+        re.compile(r"crunchyroll\.com/(?:.*/)?watch/[^/]*/(.+?)(?:\?|$)", re.IGNORECASE),
         "crunchyroll",
         "crunchyroll_slug",
         lambda m: {"slug": m.group(1)},

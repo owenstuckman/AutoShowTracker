@@ -9,9 +9,8 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
@@ -87,7 +86,8 @@ class TraktClient:
         })
         if not resp.is_success:
             raise TraktError(f"Device auth failed: {resp.status_code}")
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result
 
     def poll_device_auth(self, device_code: str, interval: int = 5, timeout: int = 600) -> bool:
         """Poll for device authorization completion.
@@ -151,6 +151,8 @@ class TraktClient:
         """
         self._ensure_auth()
         resp = self._authed_get("/users/me/watched/shows?extended=noseasons")
+        if isinstance(resp, dict):
+            return [resp]
         return resp
 
     def get_watch_history(
@@ -170,10 +172,13 @@ class TraktClient:
             List of history entry dicts.
         """
         self._ensure_auth()
-        return self._authed_get(
+        resp = self._authed_get(
             f"/users/me/history/{media_type}",
             params={"page": str(page), "limit": str(limit)},
         )
+        if isinstance(resp, dict):
+            return [resp]
+        return resp
 
     def get_all_episode_history(self) -> list[dict[str, Any]]:
         """Fetch complete episode watch history (all pages)."""
@@ -266,7 +271,8 @@ class TraktClient:
             raise TraktAuthError("Access token expired or invalid")
         if not resp.is_success:
             raise TraktError(f"Trakt API error {resp.status_code}: {resp.text}")
-        return resp.json()
+        data: list[dict[str, Any]] | dict[str, Any] = resp.json()
+        return data
 
     def _authed_post(self, path: str, json: dict[str, Any]) -> dict[str, Any]:
         resp = self._client.post(
@@ -278,7 +284,8 @@ class TraktClient:
             raise TraktAuthError("Access token expired or invalid")
         if not resp.is_success:
             raise TraktError(f"Trakt API error {resp.status_code}: {resp.text}")
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result
 
     def _save_token(self) -> None:
         self.token_path.parent.mkdir(parents=True, exist_ok=True)
@@ -317,8 +324,8 @@ def import_from_trakt(
         Dict with counts: {"imported": N, "skipped": N, "failed": N}
     """
     from show_tracker.storage.models import (
-        Show,
         Episode,
+        Show,
         WatchEvent,
     )
 
@@ -423,10 +430,10 @@ def export_to_trakt(
         Dict with counts: {"exported": N, "failed": N}
     """
     from show_tracker.storage.models import (
-        Show,
         Episode,
-        WatchEvent,
+        Show,
         UserSetting,
+        WatchEvent,
     )
 
     stats = {"exported": 0, "failed": 0}

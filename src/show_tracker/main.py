@@ -9,26 +9,27 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+from collections.abc import Coroutine
 from pathlib import Path
+from typing import Any
 
 import click
 
 from show_tracker import __version__
 from show_tracker.config import load_settings
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _run_async(coro):
+def _run_async(coro: Coroutine[Any, Any, Any]) -> Any:
     """Run an async coroutine from synchronous Click handlers."""
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     return asyncio.run(coro)
 
 
-def _echo_json(data: dict) -> None:
+def _echo_json(data: dict[str, Any]) -> None:
     """Pretty-print a dict as JSON to stdout."""
     click.echo(json.dumps(data, indent=2, default=str))
 
@@ -48,7 +49,7 @@ def _echo_json(data: dict) -> None:
 @click.pass_context
 def cli(ctx: click.Context, data_dir: Path | None) -> None:
     """Show Tracker -- automatic cross-platform media tracking."""
-    overrides: dict = {}
+    overrides: dict[str, Any] = {}
     if data_dir is not None:
         overrides["data_dir"] = data_dir
     ctx.ensure_object(dict)
@@ -120,7 +121,7 @@ def run(ctx: click.Context, host: str, port: int | None) -> None:
             pass  # pystray not available — continue without tray
 
         # Import here to avoid heavy imports when running lightweight commands.
-        import uvicorn  # noqa: F811
+        import uvicorn
 
         config = uvicorn.Config(
             "show_tracker.api:app",
@@ -169,7 +170,7 @@ def identify(ctx: click.Context, raw_string: str, source: str) -> None:
 
     async def _identify() -> None:
         # Lazy import so the CLI stays responsive for --help etc.
-        from show_tracker.identification import identify_media  # type: ignore[import-not-found]
+        from show_tracker.identification import identify_media
 
         result = await identify_media(raw_string, source=source, settings=settings)
         if result is None:
@@ -228,14 +229,14 @@ def test_pipeline(ctx: click.Context, dataset: Path | None, verbose: bool) -> No
         dataset = default_path
 
     async def _run_pipeline() -> None:
-        from show_tracker.identification import identify_media  # type: ignore[import-not-found]
+        from show_tracker.identification import identify_media
 
         with open(dataset, encoding="utf-8") as fh:
-            cases: list[dict] = json.load(fh)
+            cases: list[dict[str, Any]] = json.load(fh)
 
         total = len(cases)
         correct = 0
-        failures: list[dict] = []
+        failures: list[dict[str, Any]] = []
 
         click.echo(f"Running {total} test cases...")
         click.echo()
@@ -275,7 +276,7 @@ def test_pipeline(ctx: click.Context, dataset: Path | None, verbose: bool) -> No
     _run_async(_run_pipeline())
 
 
-def _check_match(result: dict | None, expected: dict) -> bool:
+def _check_match(result: dict[str, Any] | None, expected: dict[str, Any]) -> bool:
     """Compare an identification result against expected values."""
     if result is None:
         return False

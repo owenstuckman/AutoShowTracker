@@ -6,7 +6,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Media Event (from browser extension)
 # ---------------------------------------------------------------------------
@@ -247,4 +246,4 @@ class YouTubeStats(BaseModel):
     total_watches: int = 0
     unique_videos: int = 0
     total_watch_seconds: int = 0
-    top_channels: list[dict] = Field(default_factory=list)
+    top_channels: list[dict[str, Any]] = Field(default_factory=list)

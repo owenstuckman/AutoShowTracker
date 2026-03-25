@@ -7,17 +7,16 @@ Two separate SQLite databases:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     Boolean,
     Float,
+    ForeignKey,
     Index,
     Integer,
-    String,
     Text,
     UniqueConstraint,
-    ForeignKey,
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -29,7 +28,7 @@ from sqlalchemy.orm import (
 
 def _utcnow() -> str:
     """Return current UTC time as ISO format string."""
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
 
 # ---------------------------------------------------------------------------
@@ -220,7 +219,7 @@ class UnresolvedEvent(WatchBase):
         Index(
             "idx_unresolved_pending",
             "resolved",
-            sqlite_where=(~resolved),  # type: ignore[arg-type]
+            sqlite_where=(~resolved),
         ),
     )
 

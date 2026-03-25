@@ -117,7 +117,7 @@ def parse_media_string(
         A ParseResult with extracted structured data.
     """
     try:
-        from guessit import guessit
+        from guessit import guessit  # type: ignore[import-untyped]
     except ImportError:
         logger.error("guessit is not installed; cannot parse media string")
         return ParseResult(

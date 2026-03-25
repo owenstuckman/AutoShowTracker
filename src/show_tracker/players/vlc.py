@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import unquote
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ class VLCClient:
         try:
             resp = self._session.get(url, params=params, timeout=_REQUEST_TIMEOUT)
             resp.raise_for_status()
-            return resp.text
+            return str(resp.text)
         except requests.ConnectionError:
             logger.debug("VLC web interface not reachable at %s", self._base_url)
             return None

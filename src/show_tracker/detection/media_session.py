@@ -10,12 +10,10 @@ from __future__ import annotations
 
 import enum
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Callable, Protocol, runtime_checkable
-
-if TYPE_CHECKING:
-    pass
+from datetime import UTC, datetime
+from typing import Protocol, runtime_checkable
 
 
 class PlaybackStatus(enum.Enum):
@@ -35,7 +33,7 @@ class MediaSessionEvent:
     boundaries.
     """
 
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     player_name: str = ""
     title: str = ""
     artist: str = ""

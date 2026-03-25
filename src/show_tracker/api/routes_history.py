@@ -7,7 +7,7 @@ next-to-watch recommendations, and viewing statistics.
 from __future__ import annotations
 
 from fastapi import APIRouter, Query, Request
-from sqlalchemy import func, case, text
+from sqlalchemy import case, func, text
 
 from show_tracker.api.schemas import (
     EpisodeGridItem,

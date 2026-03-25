@@ -121,7 +121,7 @@ async def get_aliases(show_id: int, request: Request) -> list[AliasOut]:
 # ---------------------------------------------------------------------------
 
 @router.delete("/aliases/{alias_id}")
-async def delete_alias(alias_id: int, request: Request) -> dict:
+async def delete_alias(alias_id: int, request: Request) -> dict[str, str]:
     """Remove a show alias."""
     db = request.app.state.db
     with db.get_watch_session() as session:

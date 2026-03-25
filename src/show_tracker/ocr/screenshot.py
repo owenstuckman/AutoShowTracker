@@ -9,12 +9,8 @@ from __future__ import annotations
 import logging
 import subprocess
 import sys
-from typing import TYPE_CHECKING
 
 from PIL import Image
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +138,7 @@ def _capture_windows(hwnd: int) -> Image.Image:
                 )
 
                 # BGRA -> RGBA
-                img = Image.frombuffer("RGBA", (width, height), pixel_buffer, "raw", "BGRA", 0, 1)
+                img = Image.frombuffer("RGBA", (width, height), bytes(pixel_buffer), "raw", "BGRA", 0, 1)
                 return img.convert("RGB")
 
             finally:
@@ -222,13 +218,12 @@ def _capture_macos(window_id: int) -> Image.Image:
     Tries pyobjc Quartz framework first (CGWindowListCreateImage),
     then falls back to the screencapture CLI tool.
     """
-    import io
     import tempfile
 
     # Try Quartz framework first
     try:
-        import Quartz  # type: ignore[import-not-found]
         import CoreGraphics  # type: ignore[import-not-found]
+        import Quartz  # type: ignore[import-not-found]
 
         cg_image = Quartz.CGWindowListCreateImage(
             Quartz.CGRectNull,

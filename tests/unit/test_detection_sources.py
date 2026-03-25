@@ -7,10 +7,9 @@ identification, and media session factory.
 
 from __future__ import annotations
 
-import json
 import sys
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from datetime import datetime
+from unittest.mock import patch
 
 import pytest
 
@@ -72,33 +71,33 @@ class TestSMTCPlaybackStatusMapping:
     """Test _map_playback_status from smtc_listener."""
 
     def test_playing(self):
-        from show_tracker.detection.smtc_listener import _map_playback_status
         from show_tracker.detection.media_session import PlaybackStatus
+        from show_tracker.detection.smtc_listener import _map_playback_status
 
         assert _map_playback_status(4) == PlaybackStatus.PLAYING
 
     def test_paused(self):
-        from show_tracker.detection.smtc_listener import _map_playback_status
         from show_tracker.detection.media_session import PlaybackStatus
+        from show_tracker.detection.smtc_listener import _map_playback_status
 
         assert _map_playback_status(5) == PlaybackStatus.PAUSED
 
     def test_stopped(self):
-        from show_tracker.detection.smtc_listener import _map_playback_status
         from show_tracker.detection.media_session import PlaybackStatus
+        from show_tracker.detection.smtc_listener import _map_playback_status
 
         assert _map_playback_status(3) == PlaybackStatus.STOPPED
 
     def test_unknown_value(self):
-        from show_tracker.detection.smtc_listener import _map_playback_status
         from show_tracker.detection.media_session import PlaybackStatus
+        from show_tracker.detection.smtc_listener import _map_playback_status
 
         assert _map_playback_status(99) == PlaybackStatus.UNKNOWN
         assert _map_playback_status(0) == PlaybackStatus.UNKNOWN
 
     def test_invalid_type(self):
-        from show_tracker.detection.smtc_listener import _map_playback_status
         from show_tracker.detection.media_session import PlaybackStatus
+        from show_tracker.detection.smtc_listener import _map_playback_status
 
         assert _map_playback_status(None) == PlaybackStatus.UNKNOWN
         assert _map_playback_status("garbage") == PlaybackStatus.UNKNOWN
@@ -120,26 +119,26 @@ class TestMPRISPlaybackStatusMapping:
     """Test _map_playback_status from mpris_listener."""
 
     def test_playing(self):
-        from show_tracker.detection.mpris_listener import _map_playback_status
         from show_tracker.detection.media_session import PlaybackStatus
+        from show_tracker.detection.mpris_listener import _map_playback_status
 
         assert _map_playback_status("Playing") == PlaybackStatus.PLAYING
 
     def test_paused(self):
-        from show_tracker.detection.mpris_listener import _map_playback_status
         from show_tracker.detection.media_session import PlaybackStatus
+        from show_tracker.detection.mpris_listener import _map_playback_status
 
         assert _map_playback_status("Paused") == PlaybackStatus.PAUSED
 
     def test_stopped(self):
-        from show_tracker.detection.mpris_listener import _map_playback_status
         from show_tracker.detection.media_session import PlaybackStatus
+        from show_tracker.detection.mpris_listener import _map_playback_status
 
         assert _map_playback_status("Stopped") == PlaybackStatus.STOPPED
 
     def test_unknown_value(self):
-        from show_tracker.detection.mpris_listener import _map_playback_status
         from show_tracker.detection.media_session import PlaybackStatus
+        from show_tracker.detection.mpris_listener import _map_playback_status
 
         assert _map_playback_status("Buffering") == PlaybackStatus.UNKNOWN
         assert _map_playback_status("") == PlaybackStatus.UNKNOWN
@@ -149,7 +148,7 @@ class TestMPRISPlaybackStatusMapping:
         """This test only runs on Linux but checks the guard works."""
         # On Linux, instantiation might work or raise ImportError
         # depending on dbus-next availability. Both are acceptable.
-        from show_tracker.detection.mpris_listener import MPRISListener, _DBUS_AVAILABLE
+        from show_tracker.detection.mpris_listener import _DBUS_AVAILABLE, MPRISListener
 
         if not _DBUS_AVAILABLE:
             with pytest.raises(ImportError, match="dbus-next"):

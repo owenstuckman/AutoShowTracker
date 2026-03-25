@@ -12,8 +12,11 @@ from __future__ import annotations
 
 import pytest
 
-from show_tracker.identification.parser import ParseResult, parse_media_string, preprocess_for_guessit
-
+from show_tracker.identification.parser import (
+    ParseResult,
+    parse_media_string,
+    preprocess_for_guessit,
+)
 
 # ---------------------------------------------------------------------------
 # preprocess_for_guessit
