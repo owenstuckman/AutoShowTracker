@@ -6,6 +6,7 @@ and manages database lifecycle via startup/shutdown events.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -261,9 +262,36 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     app.state.detection = detection
 
+    # -- Periodic notification check (hourly) --------------------------------
+    _notification_task: asyncio.Task[None] | None = None
+
+    async def _notification_loop() -> None:
+        """Check for new episodes of tracked shows every hour."""
+        from show_tracker.notifications import notify_new_episodes
+
+        while True:
+            await asyncio.sleep(3600)  # 1 hour
+            if not _settings.has_tmdb_key():
+                continue
+            try:
+                count = notify_new_episodes(_db, _settings.tmdb_api_key)
+                if count:
+                    logger.info("Sent %d new-episode notifications", count)
+            except Exception:
+                logger.debug("Notification check failed", exc_info=True)
+
+    try:
+        _notification_task = asyncio.create_task(_notification_loop())
+        logger.info("Notification check scheduled (hourly)")
+    except Exception:
+        logger.debug("Failed to start notification task", exc_info=True)
+
     yield
 
     # -- Shutdown -----------------------------------------------------------
+    if _notification_task is not None:
+        _notification_task.cancel()
+
     try:
         await detection.stop()
         logger.info("DetectionService stopped")
@@ -312,6 +340,8 @@ from show_tracker.api.routes_settings import router as settings_router  # noqa: 
 from show_tracker.api.routes_stats import router as stats_router  # noqa: E402
 from show_tracker.api.routes_unresolved import router as unresolved_router  # noqa: E402
 from show_tracker.api.routes_webhooks import router as webhooks_router  # noqa: E402
+from show_tracker.api.routes_movies import router as movies_router  # noqa: E402
+from show_tracker.api.routes_sync import router as sync_router  # noqa: E402
 from show_tracker.api.routes_youtube import router as youtube_router  # noqa: E402
 
 app.include_router(media_router)
@@ -322,6 +352,8 @@ app.include_router(export_router)
 app.include_router(webhooks_router)
 app.include_router(stats_router)
 app.include_router(youtube_router)
+app.include_router(movies_router)
+app.include_router(sync_router)
 
 
 # ---------------------------------------------------------------------------

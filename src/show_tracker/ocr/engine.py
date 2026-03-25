@@ -120,9 +120,11 @@ def _detect_dark_theme(image: Image.Image) -> bool:
     border_pixels: list[int] = []
     for x in range(w):
         for y in range(min(5, h)):
-            border_pixels.append(int(gray.getpixel((x, y))))
+            px = gray.getpixel((x, y))
+            border_pixels.append(int(px) if isinstance(px, (int, float)) else 0)
         for y in range(max(0, h - 5), h):
-            border_pixels.append(int(gray.getpixel((x, y))))
+            px = gray.getpixel((x, y))
+            border_pixels.append(int(px) if isinstance(px, (int, float)) else 0)
 
     if not border_pixels:
         return False

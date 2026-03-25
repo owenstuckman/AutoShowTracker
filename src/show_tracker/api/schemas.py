@@ -247,3 +247,26 @@ class YouTubeStats(BaseModel):
     unique_videos: int = 0
     total_watch_seconds: int = 0
     top_channels: list[dict[str, Any]] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Movies
+# ---------------------------------------------------------------------------
+
+class MovieWatchOut(BaseModel):
+    id: int
+    tmdb_movie_id: int | None = None
+    title: str
+    year: int | None = None
+    started_at: str
+    ended_at: str | None = None
+    duration_seconds: int | None = None
+    watched_seconds: int | None = None
+    source: str | None = None
+    completed: bool = False
+
+
+class MovieStats(BaseModel):
+    total_watches: int = 0
+    unique_movies: int = 0
+    total_watch_seconds: int = 0

@@ -62,7 +62,7 @@ def _extract_plex_media(metadata: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
-def _extract_guid_id(guids: list[dict], provider: str) -> int | None:
+def _extract_guid_id(guids: list[dict[str, Any]], provider: str) -> int | None:
     """Extract an ID from Plex's Guid array (e.g. tmdb://12345)."""
     for g in guids:
         guid_str = g.get("id", "")

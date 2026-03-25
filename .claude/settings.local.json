@@ -20,7 +20,8 @@
       "Bash(python3 -c \"import ast; ast.parse\\(open\\(''src/show_tracker/api/routes_history.py''\\).read\\(\\)\\); print\\(''routes_history.py OK''\\)\")",
       "Bash(python3 -c \"import ast; ast.parse\\(open\\(''src/show_tracker/api/schemas.py''\\).read\\(\\)\\); print\\(''schemas.py OK''\\)\")",
       "Bash(node --check web_ui/static/js/app.js)",
-      "Bash(grep -r \"privacy\\\\|PRIVACY\" /mnt/c/Users/ostuc/Documents/GitHub/AutoShowTracker --include=*.md --include=*.html)"
+      "Bash(grep -r \"privacy\\\\|PRIVACY\" /mnt/c/Users/ostuc/Documents/GitHub/AutoShowTracker --include=*.md --include=*.html)",
+      "Bash(PYTHONPATH=src .venv/bin/python -m pytest tests/ --tb=short -q --ignore=tests/e2e)"
     ]
   }
 }

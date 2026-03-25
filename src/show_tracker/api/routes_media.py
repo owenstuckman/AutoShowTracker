@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Any
 
 from fastapi import APIRouter, Request
 
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["media"])
 
 # In-memory state for the current detection — lightweight, no persistence needed.
-_current_state: dict = {}
+_current_state: dict[str, Any] = {}
 
 
 @router.post("/media-event", response_model=MediaEventResponse)

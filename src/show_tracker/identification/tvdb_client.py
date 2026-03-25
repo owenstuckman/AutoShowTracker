@@ -130,7 +130,8 @@ class TVDbClient:
             List of result dicts with id, name, year, etc.
         """
         data = self._get("/search", params={"query": query, "type": search_type})
-        return data.get("data", [])
+        results: list[dict[str, Any]] = data.get("data", [])
+        return results
 
     def get_series(self, tvdb_id: int) -> dict[str, Any]:
         """Get full series details.
@@ -142,7 +143,8 @@ class TVDbClient:
             Series details dict.
         """
         data = self._get(f"/series/{tvdb_id}")
-        return data.get("data", {})
+        result: dict[str, Any] = data.get("data", {})
+        return result
 
     def get_series_extended(self, tvdb_id: int) -> dict[str, Any]:
         """Get extended series details including episodes.
@@ -154,7 +156,8 @@ class TVDbClient:
             Extended series details with seasons and episodes.
         """
         data = self._get(f"/series/{tvdb_id}/extended")
-        return data.get("data", {})
+        result: dict[str, Any] = data.get("data", {})
+        return result
 
     def get_series_episodes(
         self,
@@ -179,7 +182,8 @@ class TVDbClient:
             params["season"] = season
 
         data = self._get(f"/series/{tvdb_id}/episodes/{season_type}", params=params)
-        return data.get("data", {})
+        result: dict[str, Any] = data.get("data", {})
+        return result
 
     def get_episode(self, episode_id: int) -> dict[str, Any]:
         """Get details for a specific episode.
@@ -191,7 +195,8 @@ class TVDbClient:
             Episode details dict.
         """
         data = self._get(f"/episodes/{episode_id}")
-        return data.get("data", {})
+        result: dict[str, Any] = data.get("data", {})
+        return result
 
     def map_absolute_to_season_episode(
         self,

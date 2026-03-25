@@ -91,6 +91,17 @@ Everything listed here is implemented and working in the codebase.
 - `GET /api/stats/binge-sessions` — binge detection (3+ episodes same show, same day)
 - `GET /api/stats/patterns` — viewing patterns (hour/weekday distribution, avg session, most active time)
 
+**Movies:**
+- `GET /api/movies/recent` — recent movie watches with `limit` parameter
+- `GET /api/movies/stats` — total watches, unique movies, total watch seconds
+- `GET /api/movies/{movie_id}` — single movie detail by ID
+
+**Trakt Sync:**
+- `POST /api/sync/trakt/auth` — start Trakt OAuth2 device flow
+- `GET /api/sync/trakt/status` — check connection status
+- `POST /api/sync/trakt/sync` — trigger manual import from Trakt
+- `DELETE /api/sync/trakt/disconnect` — remove stored token
+
 ### 1C: Storage Layer (`src/show_tracker/storage/`)
 - **Dual SQLite databases** — `watch_history.db` (user data, non-rebuildable) and `media_cache.db` (TMDb/TVDb cache, rebuildable)
 - **SQLAlchemy ORM models** — `Show`, `Episode`, `WatchEvent`, `YouTubeWatch`, `MovieWatch`, `ShowAlias`, `UnresolvedEvent`, `UserSetting`, `TMDbShowCache`, `TMDbSearchCache`
@@ -106,7 +117,7 @@ Everything listed here is implemented and working in the codebase.
 
 ### 1C: Configuration (`src/show_tracker/config.py`)
 - pydantic-settings with env var priority: `ST_*` prefix env vars > `.env` file > `config/default_settings.json` > Pydantic defaults
-- Exact names for API keys: `TMDB_API_KEY`, `YOUTUBE_API_KEY`
+- Exact names for API keys: `TMDB_API_KEY`, `YOUTUBE_API_KEY`, `TRAKT_CLIENT_ID`, `TRAKT_CLIENT_SECRET`
 - All configurable: `ST_DATA_DIR`, `ST_MEDIA_SERVICE_PORT`, `ST_ACTIVITYWATCH_PORT`, `ST_AUTO_LOG_THRESHOLD`, `ST_REVIEW_THRESHOLD`, `ST_OCR_ENABLED`, `ST_HEARTBEAT_INTERVAL`, `ST_GRACE_PERIOD`, `ST_POLLING_INTERVAL`
 
 ### 1D: Packaging
@@ -153,7 +164,9 @@ Everything listed here is implemented and working in the codebase.
 - **Trakt sync module** (`sync/trakt.py`) — OAuth2 device flow, watch history import, scrobble export (code complete, but not wired to API/UI — see TODO)
 
 ### 4C: Notifications
-- `notifications.py` — `check_new_episodes()` and `notify_new_episodes()` via plyer (code complete, but not wired to scheduled checks — see TODO)
+- `notifications.py` — `check_new_episodes()` and `notify_new_episodes()` via plyer
+- Hourly background task in FastAPI lifespan calls `notify_new_episodes()` when TMDb key is configured
+- Clean cancellation on server shutdown
 
 ### 4E: Webhooks
 - Plex (multipart form), Jellyfin (JSON), Emby (JSON) — all implemented in `routes_webhooks.py`
@@ -163,6 +176,7 @@ Everything listed here is implemented and working in the codebase.
 
 - **GitHub Actions CI** (`.github/workflows/ci.yml`) — Ubuntu + Windows matrix, Python 3.11/3.12, ruff + mypy + pytest
 - **Release workflow** (`.github/workflows/release.yml`) — triggered on version tags, builds PyPI package + PyInstaller + AppImage + browser extensions
+- **Alembic initial migration** (`alembic/versions/001_initial_schema.py`) — all 8 watch_history.db tables
 - **systemd service** (`contrib/show-tracker.service`)
 - **Privacy policy** (`PRIVACY_POLICY.md`)
 - **Third-party licenses** (`THIRD_PARTY_LICENSES.txt`)
@@ -188,3 +202,17 @@ All documented in `docs/DECISIONS.md`:
 - D011: OCR engines use lazy loading
 - D012: Detection service uses asyncio
 - D013: Browser extension sends HTTP events (not WebSocket)
+
+## Code Quality
+
+### Mypy Type Checking — Clean (0 errors across 52 source files)
+- Full type annotations across all modules
+- Platform-conditional imports properly annotated with `type: ignore[import-not-found]`
+- Untyped third-party libraries suppressed with `type: ignore[import-untyped]`
+- Generic type parameters (`dict[str, Any]`, `list[int]`, etc.) on all public API signatures
+
+### Pytest — 337 tests passing (unit + integration)
+- Unit tests for parser, resolver, confidence scoring, URL patterns
+- Unit tests for all detection sources (SMTC, MPRIS, browser handler, VLC, mpv, webhooks)
+- Integration tests for ActivityWatch, identification pipeline
+- URL pattern matching tests for Netflix, YouTube, Crunchyroll, Plex, Disney+, Hulu, Amazon Prime, HBO Max

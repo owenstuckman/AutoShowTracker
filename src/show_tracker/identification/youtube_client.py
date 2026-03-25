@@ -94,7 +94,8 @@ class YouTubeClient:
         video = self.get_video(video_id)
         if video is None:
             return None
-        return video.get("snippet", {})
+        snippet: dict[str, Any] = video.get("snippet", {})
+        return snippet
 
     # -- Playlist info -----------------------------------------------------
 
@@ -133,7 +134,8 @@ class YouTubeClient:
             "playlistId": playlist_id,
             "maxResults": min(max_results, 50),
         })
-        return data.get("items", [])
+        items: list[dict[str, Any]] = data.get("items", [])
+        return items
 
     # -- Series detection --------------------------------------------------
 

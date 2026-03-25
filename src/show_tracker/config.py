@@ -81,6 +81,16 @@ class Settings(BaseSettings):
         description="YouTube Data API v3 key. Optional. Set via YOUTUBE_API_KEY env var.",
         validation_alias="YOUTUBE_API_KEY",
     )
+    trakt_client_id: str = Field(
+        default="",
+        description="Trakt.tv API client ID. Set via TRAKT_CLIENT_ID env var.",
+        validation_alias="TRAKT_CLIENT_ID",
+    )
+    trakt_client_secret: str = Field(
+        default="",
+        description="Trakt.tv API client secret. Set via TRAKT_CLIENT_SECRET env var.",
+        validation_alias="TRAKT_CLIENT_SECRET",
+    )
 
     # ── Paths ───────────────────────────────────────────────────────────
     data_dir: Path = Field(
