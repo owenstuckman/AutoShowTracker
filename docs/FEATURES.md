@@ -188,6 +188,7 @@ Everything listed here is implemented and working in the codebase.
 - **OCR benchmark** (`scripts/ocr_benchmark.py`)
 - **API load test** (`scripts/load_test.py`)
 - **Auto-setup script** (`scripts/auto_setup.py`)
+- **Windows installer** (`scripts/inno_setup.iss`) — Inno Setup script with Start Menu shortcuts, optional desktop/startup entries, database init, user data preservation on uninstall
 
 ## Design Decisions (D001–D013)
 
@@ -214,7 +215,7 @@ All documented in `docs/DECISIONS.md`:
 - Untyped third-party libraries suppressed with `type: ignore[import-untyped]`
 - Generic type parameters (`dict[str, Any]`, `list[int]`, etc.) on all public API signatures
 
-### Pytest — 337 tests passing (unit + integration)
+### Pytest — 415 tests passing (unit + integration)
 - Unit tests for parser, resolver, confidence scoring, URL patterns
 - Unit tests for all detection sources (SMTC, MPRIS, browser handler, VLC, mpv, webhooks)
 - Integration tests for ActivityWatch, identification pipeline

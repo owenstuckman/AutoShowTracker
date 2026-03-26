@@ -115,12 +115,9 @@ Design doc Phase 4B mentions optional cloud sync (Syncthing/Dropbox compatible).
 - [ ] Consider: Syncthing/Dropbox-compatible data directory setting (`ST_DATA_DIR`)
 - [ ] Consider: import/merge from another instance's export
 
-### Windows Installer — No Inno Setup Script (Low Priority)
+### Windows Installer — DONE
 
-DISTRIBUTION.md references `scripts/inno_setup.iss` but the file does not exist.
-
-- [ ] Create `scripts/inno_setup.iss` template for Inno Setup
-- [ ] Or document alternative: NSIS script, MSIX, or ZIP-only distribution
+- [x] Created `scripts/inno_setup.iss` — Inno Setup script with Start Menu shortcuts, optional desktop icon, optional startup entry, database init on install, user data preservation on uninstall
 
 ### Simkl Import — Not Implemented (Low Priority)
 
@@ -138,16 +135,27 @@ Design doc Phase 4D describes Android support. No code exists.
 
 ## Missing Test Coverage
 
-### Detection (`src/show_tracker/detection/`)
+### Detection (`src/show_tracker/detection/`) — 78 tests added
 
-- [ ] SMTC listener unit tests — mock `winsdk`, verify callback extracts title/artist/album/playback_status/source_app
-- [ ] MPRIS listener unit tests — mock `dbus-next`, verify PropertiesChanged signal handling
-- [ ] DetectionService deduplication tests — same show within 120s grace = heartbeat not new detection
-- [ ] DetectionService grace period sweeper — watches finalized after 120s silence
-- [ ] DetectionService confidence routing — >=0.9 auto-log, 0.7-0.9 flag, <0.7 unresolved
-- [ ] ActivityWatch subprocess management — port conflict detection, crash recovery with backoff
-- [ ] ActivityWatch incremental polling — `last_processed` tracking, first-poll vs subsequent-poll behavior
-- [ ] Browser extension event handling — all event types: play, pause, ended, heartbeat, page_load
+- [x] DetectionService deduplication tests — `_dedup_key` priority chain (show>media>window>page>url), same-key heartbeat vs new watch, empty key skipped (13 tests)
+- [x] DetectionService confidence scoring — `_estimate_confidence` for all signal levels, known media app boost, cap at 1.0 (10 tests)
+- [x] DetectionService confidence routing — `_confidence_tier` boundary tests, custom thresholds, AUTO_LOG/LOG_AND_FLAG/UNRESOLVED (8 tests)
+- [x] DetectionService `_process_event` — new watch creation, heartbeat dedup, stopped event skip, paused event starts, heartbeat count (7 tests)
+- [x] DetectionService heartbeat emission — fires after interval elapses (1 test)
+- [x] DetectionService `_finalize_watch` — removes from active, noop on nonexistent key (2 tests)
+- [x] DetectionService grace period sweeper — stale watch finalized, fresh watch kept (2 tests)
+- [x] DetectionService callback invocation — multiple callbacks, exception isolation (5 tests)
+- [x] DetectionService AW event conversion — window/web/browser event to DetectionEvent, timestamp fallback (5 tests)
+- [x] DetectionService async lifecycle — start/stop, mock AW, double-start noop, stop finalizes active watches (4 tests)
+- [x] DetectionService SMTC/MPRIS callback — enqueues detection, field mapping, paused state (3 tests)
+- [x] EventPoller incremental polling — first poll returns single, subsequent returns incremental, empty bucket, timestamp tracking (4 tests)
+- [x] Bucket discovery — window/web filtering, empty server, multiple browsers (3 tests)
+- [x] MockActivityWatchClient — inject/get events, URL injection, bucket registration, time-based filtering (4 tests)
+- [x] Browser event handling — all 5 event types (play/pause/ended/heartbeat/page_load), queue enqueue (6 tests)
+- [x] ActiveWatch dataclass — touch updates count, heartbeat time (2 tests)
+- [ ] SMTC listener async integration — mock `winsdk`, verify session attachment/detachment, property reading
+- [ ] MPRIS listener async integration — mock `dbus-next`, verify D-Bus connection, player discovery, signal handling
+- [ ] ActivityWatch subprocess management — port conflict detection, crash recovery with backoff (requires process mocking)
 
 ### Parsing (`src/show_tracker/identification/parser.py`)
 
