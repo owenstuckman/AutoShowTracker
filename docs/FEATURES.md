@@ -34,10 +34,10 @@ Everything listed here is implemented and working in the codebase.
 - **Shows page** — all tracked shows with poster, progress, last watched
 - **Show detail** — season/episode grid with watch status
 - **YouTube page** — video list with channel info, stats (total watches, unique videos, watch time, top channels)
-- **Movies page** — movie watch list (filters history for non-episode entries)
+- **Movies page** — movie watch list with stats cards (total watches, unique movies, watch time) using dedicated `/api/movies/*` endpoints
 - **Stats page** — daily/weekly/monthly charts, binge sessions, viewing patterns
 - **Unresolved queue** — low-confidence detections with search/assign/dismiss flow
-- **Settings page** — threshold editing, API key configuration
+- **Settings page** — threshold editing, API key configuration, notification toggle, Trakt.tv connection management
 - Responsive CSS with mobile breakpoints at 768px and 480px
 
 ### 1C: API Layer (`src/show_tracker/api/`)
@@ -161,12 +161,15 @@ Everything listed here is implemented and working in the codebase.
 
 ### 4B: Sync and Export
 - **Export** — JSON and CSV export for history and shows (`routes_export.py`)
-- **Trakt sync module** (`sync/trakt.py`) — OAuth2 device flow, watch history import, scrobble export (code complete, but not wired to API/UI — see TODO)
+- **Trakt sync module** (`sync/trakt.py`) — OAuth2 device flow, watch history import, scrobble export
+- **Trakt API routes** (`routes_sync.py`) — auth, status, sync, disconnect endpoints
+- **Trakt web UI** — Settings page Trakt section with connect/import/disconnect flow
 
 ### 4C: Notifications
 - `notifications.py` — `check_new_episodes()` and `notify_new_episodes()` via plyer
 - Hourly background task in FastAPI lifespan calls `notify_new_episodes()` when TMDb key is configured
 - Clean cancellation on server shutdown
+- `notifications_enabled` user setting — checked by background task, configurable via Settings page
 
 ### 4E: Webhooks
 - Plex (multipart form), Jellyfin (JSON), Emby (JSON) — all implemented in `routes_webhooks.py`
@@ -176,7 +179,7 @@ Everything listed here is implemented and working in the codebase.
 
 - **GitHub Actions CI** (`.github/workflows/ci.yml`) — Ubuntu + Windows matrix, Python 3.11/3.12, ruff + mypy + pytest
 - **Release workflow** (`.github/workflows/release.yml`) — triggered on version tags, builds PyPI package + PyInstaller + AppImage + browser extensions
-- **Alembic initial migration** (`alembic/versions/001_initial_schema.py`) — all 8 watch_history.db tables
+- **Alembic initial migration** (`alembic/versions/001_initial_schema.py`) — all 8 watch_history.db tables, tested on fresh and existing DBs, documented in SETUP.md
 - **systemd service** (`contrib/show-tracker.service`)
 - **Privacy policy** (`PRIVACY_POLICY.md`)
 - **Third-party licenses** (`THIRD_PARTY_LICENSES.txt`)

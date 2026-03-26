@@ -32,13 +32,13 @@ if sys.platform != "win32":
     _WINSDK_AVAILABLE = False
 else:
     try:
-        from winsdk.windows.media.control import (  # type: ignore[import-not-found]
+        from winsdk.windows.media.control import (  # type: ignore[import-not-found,import-untyped,unused-ignore]
             GlobalSystemMediaTransportControlsSession as Session,
         )
-        from winsdk.windows.media.control import (  # type: ignore[import-not-found]
+        from winsdk.windows.media.control import (  # type: ignore[import-not-found,import-untyped,unused-ignore]
             GlobalSystemMediaTransportControlsSessionManager as SessionManager,
         )
-        from winsdk.windows.media.control import (  # type: ignore[import-not-found]
+        from winsdk.windows.media.control import (  # type: ignore[import-not-found,import-untyped,unused-ignore]
             MediaPropertiesChangedEventArgs,
             PlaybackInfoChangedEventArgs,
         )
@@ -117,7 +117,7 @@ class SMTCListener:
         if self._running:
             return
 
-        self._manager = await SessionManager.request_async()  # type: ignore[name-defined]
+        self._manager = await SessionManager.request_async()  # type: ignore[name-defined,unused-ignore]
         self._attach_current_session()
 
         # Also listen for session changes (e.g. user opens a new player).

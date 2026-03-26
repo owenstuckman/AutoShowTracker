@@ -326,6 +326,64 @@ After restarting mpv, Show Tracker will connect to the socket/pipe to read the c
 
 ## Configuration
 
+---
+
+## Database Migrations (Alembic)
+
+AutoShowTracker uses [Alembic](https://alembic.sqlalchemy.org/) for database schema migrations. This is relevant when upgrading to a new version that changes the database schema.
+
+### New Installations
+
+For fresh installs, either method works:
+
+```bash
+# Option A: Use the CLI (recommended for most users)
+show-tracker init-db
+
+# Option B: Use Alembic directly (creates tables via migrations)
+alembic upgrade head
+```
+
+### Existing Installations (Upgrading)
+
+If you already have a database created by `show-tracker init-db` or a previous version, you need to tell Alembic about the current state before running future migrations:
+
+```bash
+# Step 1: Stamp the DB as being at the initial migration
+alembic stamp head
+
+# Step 2: When future migrations are added, apply them:
+alembic upgrade head
+```
+
+### Migration Commands Reference
+
+```bash
+# Show current migration revision
+alembic current
+
+# Show migration history
+alembic history
+
+# Upgrade to latest
+alembic upgrade head
+
+# Downgrade one revision
+alembic downgrade -1
+
+# Stamp without running (mark DB as current)
+alembic stamp head
+```
+
+### Important Notes
+
+- **Back up `watch_history.db` before running migrations** — this is your irreplaceable watch data.
+- `media_cache.db` is not managed by Alembic — it's rebuildable and safe to delete.
+- The `alembic.ini` config reads the database path from your `ST_DATA_DIR` setting.
+- Migration files are in `alembic/versions/`.
+
+---
+
 ### Configuration Priority (Highest to Lowest)
 
 1. **Environment variables** (prefixed with `ST_`, or exact name for API keys)

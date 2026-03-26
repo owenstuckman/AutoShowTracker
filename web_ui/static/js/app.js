@@ -130,6 +130,31 @@ const API = {
     deleteAlias(aliasId) {
         return this._fetch(`/api/aliases/${aliasId}`, { method: "DELETE" });
     },
+
+    // Movies
+    moviesRecent(limit = 50) {
+        return this._fetch(`/api/movies/recent?limit=${limit}`);
+    },
+    movieStats() {
+        return this._fetch("/api/movies/stats");
+    },
+    movieDetail(movieId) {
+        return this._fetch(`/api/movies/${movieId}`);
+    },
+
+    // Trakt Sync
+    traktStatus() {
+        return this._fetch("/api/sync/trakt/status");
+    },
+    traktStartAuth() {
+        return this._fetch("/api/sync/trakt/auth", { method: "POST" });
+    },
+    traktSync() {
+        return this._fetch("/api/sync/trakt/sync", { method: "POST" });
+    },
+    traktDisconnect() {
+        return this._fetch("/api/sync/trakt/disconnect", { method: "DELETE" });
+    },
 };
 
 // ===========================================================================
@@ -700,6 +725,12 @@ const SETTING_DEFINITIONS = [
         hint: "How often to send heartbeats during playback",
         default: "30",
     },
+    {
+        key: "notifications_enabled",
+        label: "New Episode Notifications",
+        hint: "Get notified when tracked shows have new episodes (true/false)",
+        default: "true",
+    },
 ];
 
 async function renderSettings() {
@@ -759,6 +790,79 @@ async function renderSettings() {
             statusEl.textContent = "";
         }, 3000);
     });
+
+    // -- Trakt Sync Section ---------------------------------------------------
+    const traktSection = document.createElement("div");
+    traktSection.className = "settings-form";
+    traktSection.style.marginTop = "32px";
+    traktSection.innerHTML = `
+        <h2 style="margin-bottom: 12px;">Trakt.tv Sync</h2>
+        <p class="form-hint" style="margin-bottom: 16px;">
+            Connect your Trakt.tv account to import and export watch history.
+            Requires <code>TRAKT_CLIENT_ID</code> and <code>TRAKT_CLIENT_SECRET</code> in your environment or .env file.
+        </p>
+        <div id="traktStatus" style="margin-bottom: 12px;">
+            <span class="form-hint">Checking connection...</span>
+        </div>
+        <div id="traktActions"></div>
+    `;
+    content().appendChild(traktSection);
+
+    // Load Trakt status
+    const traktStatusEl = document.getElementById("traktStatus");
+    const traktActionsEl = document.getElementById("traktActions");
+    try {
+        const status = await API.traktStatus();
+        if (status.connected) {
+            traktStatusEl.innerHTML = `<span style="color: var(--success);">Connected to Trakt.tv</span>`;
+            traktActionsEl.innerHTML = `
+                <button class="btn btn-primary" id="traktSyncBtn">Import from Trakt</button>
+                <button class="btn" id="traktDisconnectBtn" style="margin-left: 8px;">Disconnect</button>
+                <span id="traktSyncStatus" style="margin-left: 12px; font-size: 12px;"></span>
+            `;
+            document.getElementById("traktSyncBtn").addEventListener("click", async () => {
+                const st = document.getElementById("traktSyncStatus");
+                st.textContent = "Syncing...";
+                st.style.color = "var(--text-muted)";
+                try {
+                    const result = await API.traktSync();
+                    st.textContent = `Imported ${result.imported || 0} items`;
+                    st.style.color = "var(--success)";
+                } catch (err) {
+                    st.textContent = "Error: " + err.message;
+                    st.style.color = "var(--danger)";
+                }
+            });
+            document.getElementById("traktDisconnectBtn").addEventListener("click", async () => {
+                if (!confirm("Disconnect from Trakt.tv?")) return;
+                try {
+                    await API.traktDisconnect();
+                    traktStatusEl.innerHTML = `<span style="color: var(--text-muted);">Disconnected</span>`;
+                    traktActionsEl.innerHTML = `<button class="btn btn-primary" id="traktAuthBtn2">Connect Trakt.tv</button>`;
+                } catch (err) {
+                    alert("Failed to disconnect: " + err.message);
+                }
+            });
+        } else {
+            traktStatusEl.innerHTML = `<span style="color: var(--text-muted);">Not connected</span>`;
+            traktActionsEl.innerHTML = `<button class="btn btn-primary" id="traktAuthBtn">Connect Trakt.tv</button>`;
+            document.getElementById("traktAuthBtn").addEventListener("click", async () => {
+                try {
+                    const auth = await API.traktStartAuth();
+                    traktActionsEl.innerHTML = `
+                        <p>Visit <a href="${escapeHtml(auth.verification_url)}" target="_blank">${escapeHtml(auth.verification_url)}</a>
+                        and enter code: <strong>${escapeHtml(auth.user_code)}</strong></p>
+                        <p class="form-hint">After authorizing, refresh this page to see the connection status.</p>
+                    `;
+                } catch (err) {
+                    traktActionsEl.innerHTML = `<span style="color: var(--danger);">Error: ${escapeHtml(err.message)}</span>`;
+                }
+            });
+        }
+    } catch (_) {
+        traktStatusEl.innerHTML = `<span style="color: var(--text-muted);">Trakt sync not configured (set TRAKT_CLIENT_ID and TRAKT_CLIENT_SECRET)</span>`;
+        traktActionsEl.innerHTML = "";
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -991,26 +1095,48 @@ async function renderMovies() {
             <h1 class="page-title">Movies</h1>
             <p class="page-subtitle">Tracked movie watches</p>
         </div>
+        <div class="stat-cards" id="movieStatCards">
+            <div class="loading-state"><div class="spinner"></div></div>
+        </div>
+        <h2 style="margin: 24px 0 12px;">Recent Watches</h2>
         <div class="shows-grid" id="moviesGrid">
             <div class="loading-state"><div class="spinner"></div></div>
         </div>
     `;
 
-    // There's no dedicated movies endpoint yet that returns aggregated data,
-    // so we use a simple fetch. The backend can be extended later.
     let movies = [];
+    let stats = null;
     try {
-        const resp = await fetch("/api/export/history.json");
-        if (resp.ok) {
-            const all = await resp.json();
-            // Filter for movie watches if the data includes media_type
-            movies = all.filter((e) => e.media_type === "movie" || (e.show_title && !e.season_number && !e.episode_number));
-        }
+        [movies, stats] = await Promise.all([
+            API.moviesRecent(50),
+            API.movieStats().catch(() => null),
+        ]);
     } catch (_) {}
+
+    // Render stats cards
+    const statCards = document.getElementById("movieStatCards");
+    if (stats) {
+        statCards.innerHTML = `
+            <div class="stat-card">
+                <div class="stat-value">${stats.total_watches || 0}</div>
+                <div class="stat-label">Total Watches</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${stats.unique_movies || 0}</div>
+                <div class="stat-label">Unique Movies</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${formatDuration(stats.total_watch_seconds || 0)}</div>
+                <div class="stat-label">Watch Time</div>
+            </div>
+        `;
+    } else {
+        statCards.innerHTML = "";
+    }
 
     const grid = document.getElementById("moviesGrid");
 
-    if (movies.length === 0) {
+    if (!movies || movies.length === 0) {
         grid.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">&#127909;</div>
@@ -1020,22 +1146,11 @@ async function renderMovies() {
         return;
     }
 
-    // Deduplicate by title
-    const seen = new Set();
-    const unique = [];
-    for (const m of movies) {
-        const key = (m.show_title || m.title || "").toLowerCase();
-        if (!seen.has(key)) {
-            seen.add(key);
-            unique.push(m);
-        }
-    }
-
-    grid.innerHTML = unique.map((m) => `
+    grid.innerHTML = movies.map((m) => `
         <div class="show-card">
-            <div class="show-card-poster">&#127909;</div>
+            <div class="show-card-poster">${m.poster_path ? `<img src="${posterUrl(m.poster_path)}" alt="">` : "&#127909;"}</div>
             <div class="show-card-body">
-                <div class="show-card-title">${escapeHtml(m.show_title || m.title || "Unknown")}</div>
+                <div class="show-card-title">${escapeHtml(m.title || "Unknown")}${m.year ? ` (${m.year})` : ""}</div>
                 <div class="show-card-meta">
                     ${m.started_at ? formatTimeAgo(m.started_at) : ""}
                     ${m.duration_seconds ? " \u00b7 " + formatDuration(m.duration_seconds) : ""}

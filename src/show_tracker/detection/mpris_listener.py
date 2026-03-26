@@ -24,12 +24,15 @@ logger = logging.getLogger(__name__)
 
 # Platform guard ---------------------------------------------------------------
 
+Variant: Any = None  # placeholder for type-checking on non-Linux
+MessageBus: Any = None  # placeholder for type-checking on non-Linux
+
 if sys.platform != "linux":
     _DBUS_AVAILABLE = False
 else:
     try:
-        from dbus_next import Variant  # type: ignore[import-not-found]
-        from dbus_next.aio import MessageBus  # type: ignore[import-not-found]
+        from dbus_next import Variant  # type: ignore[import-not-found,no-redef]
+        from dbus_next.aio import MessageBus  # type: ignore[import-not-found,no-redef]
 
         _DBUS_AVAILABLE = True
     except ImportError:

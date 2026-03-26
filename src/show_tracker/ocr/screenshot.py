@@ -64,8 +64,8 @@ def _capture_windows(hwnd: int) -> Image.Image:
     except ImportError as exc:
         raise RuntimeError("ctypes is required for Windows screenshot capture") from exc
 
-    user32 = ctypes.windll.user32  # type: ignore[attr-defined]
-    gdi32 = ctypes.windll.gdi32  # type: ignore[attr-defined]
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined,unused-ignore]
+    gdi32 = ctypes.windll.gdi32  # type: ignore[attr-defined,unused-ignore]
 
     # Get window dimensions via GetWindowRect
     rect = wt.RECT()

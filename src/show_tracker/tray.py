@@ -59,7 +59,7 @@ class TrayIcon:
     def start(self) -> None:
         """Start the tray icon in a background thread."""
         try:
-            import pystray  # type: ignore[import-not-found]
+            import pystray  # type: ignore[import-not-found,import-untyped,unused-ignore]
         except ImportError:
             logger.warning("pystray not installed — skipping system tray icon")
             return

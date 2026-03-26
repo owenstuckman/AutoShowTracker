@@ -268,11 +268,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     async def _notification_loop() -> None:
         """Check for new episodes of tracked shows every hour."""
         from show_tracker.notifications import notify_new_episodes
+        from show_tracker.storage.models import UserSetting
 
         while True:
             await asyncio.sleep(3600)  # 1 hour
             if not _settings.has_tmdb_key():
                 continue
+            # Check user preference (default: enabled)
+            try:
+                with _db.get_watch_session() as session:
+                    pref = session.query(UserSetting).filter_by(key="notifications_enabled").first()
+                    if pref and pref.value.lower() in ("false", "0", "no", "off"):
+                        continue
+            except Exception:
+                pass  # On error, proceed with notification check
             try:
                 count = notify_new_episodes(_db, _settings.tmdb_api_key)
                 if count:

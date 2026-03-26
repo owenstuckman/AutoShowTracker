@@ -155,7 +155,7 @@ class MpvClient:
     def _send_unix(self, command: dict[str, Any]) -> dict[str, Any] | None:
         """Send a command over a Unix domain socket."""
         try:
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)  # type: ignore[attr-defined]
             sock.settimeout(_SOCKET_TIMEOUT)
             try:
                 sock.connect(self._socket_path)

@@ -70,40 +70,33 @@ Features described in design docs (`docs/design/`) but not implemented or not wi
 
 ### Movie API Routes — DONE
 
-- [x] Created `src/show_tracker/api/routes_movies.py`:
-  - [x] `GET /api/movies/recent` — recent movie watches
-  - [x] `GET /api/movies/stats` — total watches, unique movies, total watch time
-  - [x] `GET /api/movies/{movie_id}` — single movie detail
+- [x] Created `src/show_tracker/api/routes_movies.py`
 - [x] Added `MovieWatchOut` and `MovieStats` Pydantic schemas
 - [x] Registered movie router in `app.py`
-- [ ] Update web UI `renderMovies()` to use dedicated movie endpoints (currently filters `/api/history/recent`)
+- [x] Updated web UI `renderMovies()` to use dedicated `/api/movies/*` endpoints with stats cards
 
-### Trakt Sync — API Routes Done, UI Pending (Medium Priority)
+### Trakt Sync — DONE
 
-- [x] Created `src/show_tracker/api/routes_sync.py`:
-  - [x] `POST /api/sync/trakt/auth` — initiate device auth flow
-  - [x] `GET /api/sync/trakt/status` — check auth status
-  - [x] `POST /api/sync/trakt/sync` — trigger manual import
-  - [x] `DELETE /api/sync/trakt/disconnect` — revoke connection
+- [x] Created `src/show_tracker/api/routes_sync.py` (auth, status, sync, disconnect)
 - [x] Registered sync router in `app.py`
 - [x] Added `trakt_client_id` and `trakt_client_secret` to Settings config
-- [ ] Add Trakt section to web UI Settings page
+- [x] Added Trakt section to web UI Settings page (connect, import, disconnect flow)
 - [ ] Wire automatic scrobble on watch completion (optional per setting)
 
-### Notifications — Wired to Lifespan, UI Pending (Medium Priority)
+### Notifications — DONE
 
 - [x] Added periodic new-episode check to FastAPI lifespan (hourly async background task)
 - [x] Task cancels cleanly on shutdown
-- [ ] Add notification preference endpoints or use existing settings API
-- [ ] Add notification toggle to web UI Settings page
+- [x] Notification preference via `notifications_enabled` user setting (checked by background task)
+- [x] Added notification toggle to web UI Settings page
 - [ ] Consider: "continue watching" prompt on app open (design doc 4C)
 
-### Alembic Migrations — Initial Migration Written
+### Alembic Migrations — DONE
 
 - [x] Wrote initial migration: `alembic/versions/001_initial_schema.py` (all 8 watch_history.db tables)
-- [ ] Install `alembic` in venv and test: `alembic upgrade head` on fresh DB
-- [ ] Test migration on existing DB with data (ensure no data loss)
-- [ ] Document migration workflow in SETUP.md
+- [x] Tested `alembic upgrade head` on fresh DB — all 8 tables + indexes created correctly
+- [x] Tested `alembic stamp head` on existing DB — stamps without error
+- [x] Documented migration workflow in SETUP.md (new installations, upgrades, command reference)
 
 ### macOS Support — Stub Only (Low Priority)
 
