@@ -7,10 +7,8 @@ and BrowserEventHandler event type handling.
 
 from __future__ import annotations
 
-import asyncio
 import time
 from datetime import UTC, datetime
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -21,14 +19,13 @@ from show_tracker.detection.activitywatch import (
 )
 from show_tracker.detection.browser_handler import BrowserMediaEvent
 from show_tracker.detection.detection_service import (
+    _KNOWN_MEDIA_APPS,
     ActiveWatch,
     ConfidenceTier,
     DetectionEvent,
     DetectionService,
-    _KNOWN_MEDIA_APPS,
 )
 from show_tracker.detection.media_session import MediaSessionEvent, PlaybackStatus
-
 
 # ===========================================================================
 # DetectionService._dedup_key

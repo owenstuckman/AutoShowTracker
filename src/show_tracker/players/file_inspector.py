@@ -97,7 +97,7 @@ def find_media_player_pids(app_name: str) -> list[int]:
 def _inspect_via_psutil(pid: int) -> list[str]:
     """Use psutil to list open files for a process."""
     try:
-        import psutil  # noqa: F811
+        import psutil
     except ImportError:
         logger.debug("psutil not available for file inspection")
         return []

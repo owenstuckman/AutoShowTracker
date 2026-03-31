@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -345,12 +345,12 @@ app.add_middleware(
 from show_tracker.api.routes_export import router as export_router  # noqa: E402
 from show_tracker.api.routes_history import router as history_router  # noqa: E402
 from show_tracker.api.routes_media import router as media_router  # noqa: E402
+from show_tracker.api.routes_movies import router as movies_router  # noqa: E402
 from show_tracker.api.routes_settings import router as settings_router  # noqa: E402
 from show_tracker.api.routes_stats import router as stats_router  # noqa: E402
+from show_tracker.api.routes_sync import router as sync_router  # noqa: E402
 from show_tracker.api.routes_unresolved import router as unresolved_router  # noqa: E402
 from show_tracker.api.routes_webhooks import router as webhooks_router  # noqa: E402
-from show_tracker.api.routes_movies import router as movies_router  # noqa: E402
-from show_tracker.api.routes_sync import router as sync_router  # noqa: E402
 from show_tracker.api.routes_youtube import router as youtube_router  # noqa: E402
 
 app.include_router(media_router)
