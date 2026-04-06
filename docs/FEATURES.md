@@ -39,6 +39,7 @@ Everything listed here is implemented and working in the codebase.
 - **Unresolved queue** — low-confidence detections with search/assign/dismiss flow
 - **Settings page** — threshold editing, API key configuration, notification toggle, Trakt.tv connection management
 - Responsive CSS with mobile breakpoints at 768px and 480px
+- **Attribution footer** — sidebar footer credits TMDb and YouTube per their API attribution requirements
 
 ### 1C: API Layer (`src/show_tracker/api/`)
 
@@ -107,6 +108,7 @@ Everything listed here is implemented and working in the codebase.
 - **SQLAlchemy ORM models** — `Show`, `Episode`, `WatchEvent`, `YouTubeWatch`, `MovieWatch`, `ShowAlias`, `UnresolvedEvent`, `UserSetting`, `TMDbShowCache`, `TMDbSearchCache`
 - **WatchRepository** — CRUD operations, `upsert_show()`, `upsert_episode()`, `process_heartbeat()`, `create_youtube_watch()`
 - **DatabaseManager** — session management with auto-commit context manager
+- **TMDb cache TTL** — `TMDB_MAX_CACHE_HOURS = 24*30*6` (6 months) enforced per TMDb ToS; `get_cached_show()` and `get_cached_episode()` default to this maximum
 
 ### 1C: CLI (`src/show_tracker/main.py`)
 - Click-based CLI with commands: `run`, `identify`, `test-pipeline`, `init-db`, `setup`
@@ -142,7 +144,7 @@ Everything listed here is implemented and working in the codebase.
 
 ### 2D: Improved Identification (`src/show_tracker/identification/`)
 - **TVDb client** (`tvdb_client.py`) — TVDb v4 API with OAuth2 device flow, search, episode lookup, anime/absolute numbering fallback
-- **YouTube client** (`youtube_client.py`) — YouTube Data API v3, video metadata, playlist info, series detection
+- **YouTube client** (`youtube_client.py`) — YouTube Data API v3, video metadata, playlist info, series detection; class-level `_quota_used` counter with warnings at 80% and errors at 100% of 10,000 unit/day free tier
 - **Movie identification** — `MovieIdentificationResult` dataclass, `resolve_movie()` in resolver, `MovieWatch` ORM model
 - **URL patterns** (`url_patterns.py`) — platform-specific extractors for Netflix, Disney+, Prime, HBO Max, Crunchyroll, Hulu, YouTube
 
@@ -215,8 +217,17 @@ All documented in `docs/DECISIONS.md`:
 - Untyped third-party libraries suppressed with `type: ignore[import-untyped]`
 - Generic type parameters (`dict[str, Any]`, `list[int]`, etc.) on all public API signatures
 
-### Pytest — 415 tests passing (unit + integration)
-- Unit tests for parser, resolver, confidence scoring, URL patterns
-- Unit tests for all detection sources (SMTC, MPRIS, browser handler, VLC, mpv, webhooks)
-- Integration tests for ActivityWatch, identification pipeline
-- URL pattern matching tests for Netflix, YouTube, Crunchyroll, Plex, Disney+, Hulu, Amazon Prime, HBO Max
+### Pytest — 602 tests passing (unit)
+- **Parser** (`test_parser.py`) — filename parsing, date-based episodes, absolute numbering, URL patterns, platform suffix stripping, noise word removal
+- **URL patterns** (`test_url_patterns.py`) — Netflix, YouTube, Crunchyroll, Plex, Disney+, Hulu, Amazon Prime, HBO Max
+- **Resolver** (`test_resolver.py`) — TMDb fuzzy matching (0.80 threshold), alias table lookup, cache TTL, IdentificationResult/MovieIdentificationResult dataclasses
+- **Confidence scoring** (`test_confidence.py`) — base scores per source, URL/season+ep/fuzzy bonuses, OCR/no-season/abbreviated-title penalties, 1.0 cap
+- **Detection service** (`test_detection_service.py`) — deduplication, confidence routing, callbacks, heartbeat emission, AW event conversion, lifecycle
+- **Detection sources** (`test_detection_sources.py`) — SMTC/MPRIS callbacks, EventPoller, bucket discovery, browser events, ActiveWatch
+- **Storage** (`test_storage.py`) — dual DB isolation, WatchRepository CRUD, unresolved lifecycle, completion at ≥90%, cache TTL (6-month max per TMDb ToS), FailedLookup TTL (24h)
+- **API endpoints** (`test_api.py`) — all routes: health, media-event, currently-watching, history, unresolved, settings, aliases, export, stats, webhooks, movies
+- **OCR pipeline** (`test_ocr.py`) — region cropping, profile loading, engine selection, preprocessing (grayscale, threshold, upscale, invert)
+- **Player IPC** (`test_players.py`) — VLC HTTP XML parsing, mpv JSON IPC socket/pipe
+- **CLI** (`test_cli.py`) — identify, test-pipeline, init-db, setup wizard
+- **Configuration** (`test_config.py`) — defaults, env var overrides, priority order, path derivation, ensure_directories()
+- **Sync & notifications** (`test_sync.py`) — Trakt router structure, send_notification(), check_new_episodes() with mocked DB and TMDb
