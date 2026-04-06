@@ -91,7 +91,9 @@ class PlayerService:
             return
 
         self._vlc_client.connect(
-            host=self.vlc_host, port=self.vlc_port, password=self.vlc_password,
+            host=self.vlc_host,
+            port=self.vlc_port,
+            password=self.vlc_password,
         )
         self._mpv_client.connect(socket_path=self.mpv_socket_path)
         self._initialised = True
@@ -247,7 +249,9 @@ class PlayerService:
                 title = Path(file_path).name
                 logger.debug(
                     "File inspection found '%s' for PID %d (%s)",
-                    title, pid, app_name,
+                    title,
+                    pid,
+                    app_name,
                 )
                 return MediaInfo(
                     title=title,

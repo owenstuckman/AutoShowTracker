@@ -30,6 +30,7 @@ router = APIRouter(prefix="/api/history", tags=["history"])
 # GET /api/history/recent
 # ---------------------------------------------------------------------------
 
+
 @router.get("/recent", response_model=list[EpisodeInfo])
 async def get_recent(
     request: Request,
@@ -79,6 +80,7 @@ async def get_recent(
 # ---------------------------------------------------------------------------
 # GET /api/history/shows
 # ---------------------------------------------------------------------------
+
 
 @router.get("/shows", response_model=list[ShowSummary])
 async def get_shows(request: Request) -> list[ShowSummary]:
@@ -156,6 +158,7 @@ async def get_shows(request: Request) -> list[ShowSummary]:
 # GET /api/history/shows/{show_id}
 # ---------------------------------------------------------------------------
 
+
 @router.get("/shows/{show_id}", response_model=ShowDetail)
 async def get_show_detail(show_id: int, request: Request) -> ShowDetail:
     """Return show detail with season/episode grid."""
@@ -164,6 +167,7 @@ async def get_show_detail(show_id: int, request: Request) -> ShowDetail:
         show = session.query(Show).filter(Show.id == show_id).first()
         if show is None:
             from fastapi import HTTPException
+
             raise HTTPException(status_code=404, detail="Show not found")
 
         episodes = (
@@ -174,10 +178,12 @@ async def get_show_detail(show_id: int, request: Request) -> ShowDetail:
                 Episode.title,
                 Episode.air_date,
                 Episode.runtime_minutes,
-                func.max(case(
-                    (WatchEvent.completed == True, 1),  # noqa: E712
-                    else_=0,
-                )).label("watched"),
+                func.max(
+                    case(
+                        (WatchEvent.completed == True, 1),  # noqa: E712
+                        else_=0,
+                    )
+                ).label("watched"),
                 func.max(WatchEvent.started_at).label("last_watched"),
                 func.count(WatchEvent.id).label("watch_count"),
             )
@@ -204,8 +210,7 @@ async def get_show_detail(show_id: int, request: Request) -> ShowDetail:
             seasons_map.setdefault(ep.season_number, []).append(item)
 
         seasons = [
-            SeasonInfo(season_number=sn, episodes=eps)
-            for sn, eps in sorted(seasons_map.items())
+            SeasonInfo(season_number=sn, episodes=eps) for sn, eps in sorted(seasons_map.items())
         ]
 
         return ShowDetail(
@@ -225,6 +230,7 @@ async def get_show_detail(show_id: int, request: Request) -> ShowDetail:
 # GET /api/history/shows/{show_id}/progress
 # ---------------------------------------------------------------------------
 
+
 @router.get("/shows/{show_id}/progress", response_model=list[EpisodeProgress])
 async def get_show_progress(show_id: int, request: Request) -> list[EpisodeProgress]:
     """Return episode-level progress for a show."""
@@ -236,10 +242,12 @@ async def get_show_progress(show_id: int, request: Request) -> list[EpisodeProgr
                 Episode.season_number,
                 Episode.episode_number,
                 Episode.title,
-                func.max(case(
-                    (WatchEvent.completed == True, 1),  # noqa: E712
-                    else_=0,
-                )).label("watched"),
+                func.max(
+                    case(
+                        (WatchEvent.completed == True, 1),  # noqa: E712
+                        else_=0,
+                    )
+                ).label("watched"),
                 func.max(WatchEvent.duration_seconds).label("longest_watch"),
                 func.max(WatchEvent.started_at).label("last_watched"),
             )
@@ -267,6 +275,7 @@ async def get_show_progress(show_id: int, request: Request) -> list[EpisodeProgr
 # ---------------------------------------------------------------------------
 # GET /api/history/next-to-watch
 # ---------------------------------------------------------------------------
+
 
 @router.get("/next-to-watch", response_model=list[NextToWatch])
 async def get_next_to_watch(request: Request) -> list[NextToWatch]:
@@ -333,26 +342,24 @@ async def get_next_to_watch(request: Request) -> list[NextToWatch]:
 # GET /api/history/stats
 # ---------------------------------------------------------------------------
 
+
 @router.get("/stats", response_model=WatchStats)
 async def get_stats(request: Request) -> WatchStats:
     """Return watch time statistics: totals, by show, and by week."""
     db = request.app.state.db
     with db.get_watch_session() as session:
         # Total stats
-        totals = (
-            session.query(
-                func.coalesce(func.sum(WatchEvent.duration_seconds), 0).label("total_time"),
-                func.count(
-                    func.distinct(
-                        case(
-                            (WatchEvent.completed == True, WatchEvent.episode_id),  # noqa: E712
-                            else_=None,
-                        )
+        totals = session.query(
+            func.coalesce(func.sum(WatchEvent.duration_seconds), 0).label("total_time"),
+            func.count(
+                func.distinct(
+                    case(
+                        (WatchEvent.completed == True, WatchEvent.episode_id),  # noqa: E712
+                        else_=None,
                     )
-                ).label("total_episodes"),
-            )
-            .first()
-        )
+                )
+            ).label("total_episodes"),
+        ).first()
 
         total_shows = (
             session.query(func.count(func.distinct(Episode.show_id)))
@@ -363,10 +370,7 @@ async def get_stats(request: Request) -> WatchStats:
         # YouTube totals
         yt_count = session.query(func.count(YouTubeWatch.id)).scalar() or 0
         yt_time = (
-            session.query(
-                func.coalesce(func.sum(YouTubeWatch.watched_seconds), 0)
-            ).scalar()
-            or 0
+            session.query(func.coalesce(func.sum(YouTubeWatch.watched_seconds), 0)).scalar() or 0
         )
 
         # By show

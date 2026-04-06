@@ -19,6 +19,7 @@ router = APIRouter(prefix="/api/stats", tags=["stats"])
 # Response schemas
 # ---------------------------------------------------------------------------
 
+
 class DayStats(BaseModel):
     date: str
     total_seconds: int = 0
@@ -68,6 +69,7 @@ class ViewingPattern(BaseModel):
 # GET /api/stats/daily
 # ---------------------------------------------------------------------------
 
+
 @router.get("/daily", response_model=list[DayStats])
 async def get_daily_stats(
     request: Request,
@@ -104,12 +106,14 @@ async def get_daily_stats(
                 .first()
             )
 
-            results.append(DayStats(
-                date=r.day or "",
-                total_seconds=r.total_seconds,
-                episode_count=r.episode_count,
-                top_show=top.title if top else None,
-            ))
+            results.append(
+                DayStats(
+                    date=r.day or "",
+                    total_seconds=r.total_seconds,
+                    episode_count=r.episode_count,
+                    top_show=top.title if top else None,
+                )
+            )
 
         return results
 
@@ -117,6 +121,7 @@ async def get_daily_stats(
 # ---------------------------------------------------------------------------
 # GET /api/stats/weekly
 # ---------------------------------------------------------------------------
+
 
 @router.get("/weekly", response_model=list[WeekStats])
 async def get_weekly_stats(
@@ -152,6 +157,7 @@ async def get_weekly_stats(
 # GET /api/stats/monthly
 # ---------------------------------------------------------------------------
 
+
 @router.get("/monthly", response_model=list[MonthStats])
 async def get_monthly_stats(
     request: Request,
@@ -186,6 +192,7 @@ async def get_monthly_stats(
 # GET /api/stats/binge-sessions
 # ---------------------------------------------------------------------------
 
+
 @router.get("/binge-sessions", response_model=list[BingeSession])
 async def get_binge_sessions(
     request: Request,
@@ -202,12 +209,8 @@ async def get_binge_sessions(
                 func.date(WatchEvent.started_at).label("day"),
                 func.count(WatchEvent.id).label("ep_count"),
                 func.coalesce(func.sum(WatchEvent.duration_seconds), 0).label("total_seconds"),
-                func.min(
-                    Episode.season_number * 1000 + Episode.episode_number
-                ).label("first_ep"),
-                func.max(
-                    Episode.season_number * 1000 + Episode.episode_number
-                ).label("last_ep"),
+                func.min(Episode.season_number * 1000 + Episode.episode_number).label("first_ep"),
+                func.max(Episode.season_number * 1000 + Episode.episode_number).label("last_ep"),
             )
             .join(Episode, Episode.show_id == Show.id)
             .join(WatchEvent, WatchEvent.episode_id == Episode.id)
@@ -222,15 +225,17 @@ async def get_binge_sessions(
         for r in rows:
             first_s, first_e = divmod(r.first_ep, 1000)
             last_s, last_e = divmod(r.last_ep, 1000)
-            results.append(BingeSession(
-                show_id=r.show_id,
-                show_title=r.show_title,
-                date=r.day or "",
-                episode_count=r.ep_count,
-                total_seconds=r.total_seconds,
-                first_episode=f"S{first_s:02d}E{first_e:02d}",
-                last_episode=f"S{last_s:02d}E{last_e:02d}",
-            ))
+            results.append(
+                BingeSession(
+                    show_id=r.show_id,
+                    show_title=r.show_title,
+                    date=r.day or "",
+                    episode_count=r.ep_count,
+                    total_seconds=r.total_seconds,
+                    first_episode=f"S{first_s:02d}E{first_e:02d}",
+                    last_episode=f"S{last_s:02d}E{last_e:02d}",
+                )
+            )
 
         return results
 
@@ -238,6 +243,7 @@ async def get_binge_sessions(
 # ---------------------------------------------------------------------------
 # GET /api/stats/patterns
 # ---------------------------------------------------------------------------
+
 
 @router.get("/patterns", response_model=ViewingPattern)
 async def get_viewing_patterns(request: Request) -> ViewingPattern:

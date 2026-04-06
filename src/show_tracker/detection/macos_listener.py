@@ -13,8 +13,11 @@ from __future__ import annotations
 
 import logging
 import sys
-from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +59,7 @@ class MacOSMediaListener:
 
         try:
             import MediaPlayer  # type: ignore[import-not-found]  # noqa: F401
+
             return True
         except ImportError:
             return False

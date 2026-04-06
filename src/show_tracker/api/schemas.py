@@ -10,12 +10,13 @@ from pydantic import BaseModel, Field
 # Media Event (from browser extension)
 # ---------------------------------------------------------------------------
 
+
 class VideoElementInfo(BaseModel):
     playing: bool = False
-    currentTime: float = 0.0
+    currentTime: float = 0.0  # noqa: N815
     duration: float = 0.0
     src: str | None = None
-    playerType: str = "unknown"
+    playerType: str = "unknown"  # noqa: N815
 
 
 class UrlMatchResult(BaseModel):
@@ -37,6 +38,7 @@ class MediaMetadata(BaseModel):
 
 class MediaEventIn(BaseModel):
     """Incoming media event from the browser extension."""
+
     type: str  # "play" | "pause" | "ended" | "heartbeat" | "page_load"
     timestamp: int  # Unix ms
     tab_url: str = ""
@@ -65,6 +67,7 @@ class CurrentlyWatchingResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Watch History
 # ---------------------------------------------------------------------------
+
 
 class EpisodeInfo(BaseModel):
     episode_id: int
@@ -163,6 +166,7 @@ class WeekWatchTime(BaseModel):
 # Unresolved Events
 # ---------------------------------------------------------------------------
 
+
 class UnresolvedEventOut(BaseModel):
     id: int
     raw_input: str
@@ -197,6 +201,7 @@ class SearchResult(BaseModel):
 # Settings & Aliases
 # ---------------------------------------------------------------------------
 
+
 class SettingOut(BaseModel):
     key: str
     value: str
@@ -222,6 +227,7 @@ class AliasOut(BaseModel):
 # Generic
 # ---------------------------------------------------------------------------
 
+
 class HealthResponse(BaseModel):
     status: str = "ok"
     version: str = ""
@@ -230,6 +236,7 @@ class HealthResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # YouTube
 # ---------------------------------------------------------------------------
+
 
 class YouTubeWatchOut(BaseModel):
     id: int
@@ -252,6 +259,7 @@ class YouTubeStats(BaseModel):
 # ---------------------------------------------------------------------------
 # Movies
 # ---------------------------------------------------------------------------
+
 
 class MovieWatchOut(BaseModel):
     id: int

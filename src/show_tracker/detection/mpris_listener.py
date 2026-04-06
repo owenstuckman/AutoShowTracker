@@ -10,6 +10,7 @@ Requires the ``dbus-next`` package (install with ``pip install show-tracker[linu
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import sys
 from typing import Any
@@ -88,8 +89,7 @@ class MPRISListener:
     def __init__(self) -> None:
         if sys.platform != "linux":
             raise RuntimeError(
-                "MPRISListener is only supported on Linux. "
-                f"Current platform: {sys.platform!r}"
+                f"MPRISListener is only supported on Linux. Current platform: {sys.platform!r}"
             )
         if not _DBUS_AVAILABLE:
             raise ImportError(
@@ -131,10 +131,8 @@ class MPRISListener:
         """Disconnect from D-Bus and release all subscriptions."""
         if self._name_watch_task is not None:
             self._name_watch_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._name_watch_task
-            except asyncio.CancelledError:
-                pass
             self._name_watch_task = None
 
         self._tracked_players.clear()
@@ -202,7 +200,7 @@ class MPRISListener:
                 return
             if new_owner and not old_owner:
                 # New player appeared.
-                asyncio.ensure_future(self._track_player(name))
+                _task = asyncio.ensure_future(self._track_player(name))  # noqa: RUF006
             elif old_owner and not new_owner:
                 # Player disappeared.
                 self._tracked_players.pop(name, None)

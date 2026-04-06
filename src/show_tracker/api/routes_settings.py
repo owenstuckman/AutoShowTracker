@@ -23,21 +23,20 @@ router = APIRouter(prefix="/api", tags=["settings"])
 # GET /api/settings
 # ---------------------------------------------------------------------------
 
+
 @router.get("/settings", response_model=list[SettingOut])
 async def get_all_settings(request: Request) -> list[SettingOut]:
     """Return all user settings as key-value pairs."""
     db = request.app.state.db
     with db.get_watch_session() as session:
         rows = session.query(UserSetting).order_by(UserSetting.key).all()
-        return [
-            SettingOut(key=r.key, value=r.value)
-            for r in rows
-        ]
+        return [SettingOut(key=r.key, value=r.value) for r in rows]
 
 
 # ---------------------------------------------------------------------------
 # PUT /api/settings/{key}
 # ---------------------------------------------------------------------------
+
 
 @router.put("/settings/{key}", response_model=SettingOut)
 async def update_setting(
@@ -62,17 +61,14 @@ async def update_setting(
 # POST /api/aliases
 # ---------------------------------------------------------------------------
 
+
 @router.post("/aliases", response_model=AliasOut, status_code=201)
 async def add_alias(body: AliasCreate, request: Request) -> AliasOut:
     """Add a new show alias for name resolution."""
     db = request.app.state.db
     with db.get_watch_session() as session:
         # Check for duplicate
-        existing = (
-            session.query(ShowAlias)
-            .filter(ShowAlias.alias == body.alias)
-            .first()
-        )
+        existing = session.query(ShowAlias).filter(ShowAlias.alias == body.alias).first()
         if existing is not None:
             raise HTTPException(
                 status_code=409,
@@ -99,6 +95,7 @@ async def add_alias(body: AliasCreate, request: Request) -> AliasOut:
 # GET /api/aliases/{show_id}
 # ---------------------------------------------------------------------------
 
+
 @router.get("/aliases/{show_id}", response_model=list[AliasOut])
 async def get_aliases(show_id: int, request: Request) -> list[AliasOut]:
     """Return all aliases for a given show."""
@@ -110,15 +107,13 @@ async def get_aliases(show_id: int, request: Request) -> list[AliasOut]:
             .order_by(ShowAlias.alias)
             .all()
         )
-        return [
-            AliasOut(id=r.id, show_id=r.show_id, alias=r.alias, source=r.source)
-            for r in rows
-        ]
+        return [AliasOut(id=r.id, show_id=r.show_id, alias=r.alias, source=r.source) for r in rows]
 
 
 # ---------------------------------------------------------------------------
 # DELETE /api/aliases/{alias_id}
 # ---------------------------------------------------------------------------
+
 
 @router.delete("/aliases/{alias_id}")
 async def delete_alias(alias_id: int, request: Request) -> dict[str, str]:

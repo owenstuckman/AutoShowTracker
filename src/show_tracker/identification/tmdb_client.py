@@ -77,17 +77,13 @@ class TMDbClient:
 
         if response.status_code == RATE_LIMIT_STATUS:
             retry_after = response.headers.get("Retry-After", "unknown")
-            raise TMDbRateLimitError(
-                f"TMDb rate limit exceeded. Retry after {retry_after}s."
-            )
+            raise TMDbRateLimitError(f"TMDb rate limit exceeded. Retry after {retry_after}s.")
 
         if response.status_code == 404:
             raise TMDbNotFoundError(f"Resource not found: {path}")
 
         if not response.is_success:
-            raise TMDbError(
-                f"TMDb API error {response.status_code} for {path}: {response.text}"
-            )
+            raise TMDbError(f"TMDb API error {response.status_code} for {path}: {response.text}")
 
         return response.json()  # type: ignore[no-any-return]
 
@@ -122,9 +118,7 @@ class TMDbClient:
         """
         return self._get(f"/tv/{tmdb_id}")
 
-    def get_episode(
-        self, tmdb_id: int, season: int, episode: int
-    ) -> dict[str, Any]:
+    def get_episode(self, tmdb_id: int, season: int, episode: int) -> dict[str, Any]:
         """Get details for a specific episode.
 
         Args:
@@ -178,9 +172,7 @@ class TMDbClient:
         """
         return self._get(f"/movie/{tmdb_id}")
 
-    def find_by_external_id(
-        self, external_id: str, source: str
-    ) -> dict[str, Any]:
+    def find_by_external_id(self, external_id: str, source: str) -> dict[str, Any]:
         """Find TMDb entries by an external ID (e.g. IMDB, TVDB).
 
         Args:

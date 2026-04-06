@@ -6,6 +6,7 @@ to resolve raw detection signals into canonical episode identifications.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -79,7 +80,9 @@ class CacheStore(Protocol):
         """Return cached episode data, or None."""
         ...
 
-    def set_episode(self, tmdb_show_id: int, season: int, episode: int, data: dict[str, Any]) -> None:
+    def set_episode(
+        self, tmdb_show_id: int, season: int, episode: int, data: dict[str, Any]
+    ) -> None:
         """Cache episode data."""
         ...
 
@@ -103,7 +106,9 @@ class _NullCacheStore:
     def get_episode(self, tmdb_show_id: int, season: int, episode: int) -> dict[str, Any] | None:
         return None
 
-    def set_episode(self, tmdb_show_id: int, season: int, episode: int, data: dict[str, Any]) -> None:
+    def set_episode(
+        self, tmdb_show_id: int, season: int, episode: int, data: dict[str, Any]
+    ) -> None:
         pass
 
 
@@ -323,7 +328,8 @@ class EpisodeResolver:
         else:
             raw_score = max(
                 fuzz.ratio(title_query.lower(), best_movie.get("title", "").lower()) / 100.0,
-                fuzz.ratio(title_query.lower(), best_movie.get("original_title", "").lower()) / 100.0,
+                fuzz.ratio(title_query.lower(), best_movie.get("original_title", "").lower())
+                / 100.0,
             )
 
         if best_movie is None or raw_score < FUZZY_THRESHOLD:
@@ -342,10 +348,8 @@ class EpisodeResolver:
         release_date = best_movie.get("release_date", "")
         year = None
         if release_date and len(release_date) >= 4:
-            try:
+            with contextlib.suppress(ValueError):
                 year = int(release_date[:4])
-            except ValueError:
-                pass
 
         return MovieIdentificationResult(
             tmdb_movie_id=best_movie["id"],
@@ -390,11 +394,11 @@ class EpisodeResolver:
 
         logger.debug(
             "Attempting TVDb fallback for %r (absolute ep %d)",
-            title_query, parsed.episode,
+            title_query,
+            parsed.episode,
         )
 
         try:
-
             # Search TVDb
             results = self.tvdb.search(title_query, search_type="series")
             if not results:
@@ -439,7 +443,9 @@ class EpisodeResolver:
                     )
 
                     return self._resolve_with_show_id(
-                        tmdb_show_id, mapped_parsed, source_type,
+                        tmdb_show_id,
+                        mapped_parsed,
+                        source_type,
                         match_method="tvdb_absolute_fallback",
                         tmdb_match_score=0.75,
                     )
@@ -504,12 +510,16 @@ class EpisodeResolver:
                 except TMDbNotFoundError:
                     logger.debug(
                         "Episode S%02dE%02d not found for TMDb show %d",
-                        season, episode, tmdb_show_id,
+                        season,
+                        episode,
+                        tmdb_show_id,
                     )
                 except TMDbError:
                     logger.exception(
                         "Failed to fetch episode S%02dE%02d for TMDb show %d",
-                        season, episode, tmdb_show_id,
+                        season,
+                        episode,
+                        tmdb_show_id,
                     )
 
         confidence = calculate_confidence(parsed, tmdb_match_score, source_type, match_method)

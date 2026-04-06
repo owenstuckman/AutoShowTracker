@@ -7,6 +7,7 @@ mock client for testing.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import socket
@@ -120,10 +121,8 @@ class ActivityWatchManager:
     def shutdown(self) -> None:
         """Gracefully terminate all managed child processes."""
         for proc in reversed(self.processes):
-            try:
+            with contextlib.suppress(OSError):
                 proc.terminate()
-            except OSError:
-                pass
         for proc in self.processes:
             try:
                 proc.wait(timeout=5)
@@ -168,9 +167,7 @@ class ActivityWatchManager:
                 logger.info("ActivityWatch server ready on port %d", self.port)
                 return
             time.sleep(0.5)
-        raise RuntimeError(
-            f"ActivityWatch server did not become ready within {timeout}s"
-        )
+        raise RuntimeError(f"ActivityWatch server did not become ready within {timeout}s")
 
     def _attempt_restart(self, binary_name: str) -> None:
         count = self._crash_counts.get(binary_name, 0) + 1
@@ -184,7 +181,7 @@ class ActivityWatchManager:
             )
             return
 
-        backoff = _BACKOFF_BASE ** count
+        backoff = _BACKOFF_BASE**count
         logger.info(
             "Restarting %s (attempt %d/%d) after %.1fs backoff",
             binary_name,
@@ -400,11 +397,7 @@ class MockActivityWatchClient:
         bucket_id: str,
         since: datetime,
     ) -> list[dict[str, Any]]:
-        return [
-            e
-            for e in self.mock_events
-            if datetime.fromisoformat(e["timestamp"]) > since
-        ]
+        return [e for e in self.mock_events if datetime.fromisoformat(e["timestamp"]) > since]
 
     def _get_events(
         self,

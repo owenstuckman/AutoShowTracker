@@ -96,6 +96,7 @@ def _rows_to_csv(rows: list[dict[str, Any]]) -> str:
 # History export
 # ---------------------------------------------------------------------------
 
+
 @router.get("/history.json")
 async def export_history_json(request: Request) -> JSONResponse:
     """Export all watch history as JSON."""
@@ -118,6 +119,7 @@ async def export_history_csv(request: Request) -> StreamingResponse:
 # ---------------------------------------------------------------------------
 # Shows export
 # ---------------------------------------------------------------------------
+
 
 @router.get("/shows.json")
 async def export_shows_json(request: Request) -> JSONResponse:

@@ -26,16 +26,17 @@ logger = logging.getLogger(__name__)
 # Test dataset
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class TestCase:
     """One row of the integration-test dataset."""
 
     raw_input: str
     source_type: str
-    expected_show: str          # canonical (or close-enough) title substring
+    expected_show: str  # canonical (or close-enough) title substring
     expected_season: int | None
     expected_episode: int | None
-    category: str = ""          # for reporting only
+    category: str = ""  # for reporting only
 
 
 # fmt: off
@@ -189,6 +190,7 @@ TEST_DATASET: list[TestCase] = [
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _title_matches(result: ParseResult, expected_substring: str) -> bool:
     """Return True if *expected_substring* appears in the parsed title (case-insensitive).
 
@@ -196,7 +198,10 @@ def _title_matches(result: ParseResult, expected_substring: str) -> bool:
     ``"breaking-bad"`` match expected ``"Breaking Bad"``.
     """
     import re
-    normalise = lambda s: re.sub(r"[-._]+", " ", s).lower().strip()
+
+    def normalise(s: str) -> str:
+        return re.sub(r"[-._]+", " ", s).lower().strip()
+
     return normalise(expected_substring) in normalise(result.title)
 
 
@@ -204,14 +209,13 @@ def _episode_matches(result: ParseResult, tc: TestCase) -> bool:
     """Return True if season/episode match expectations (None = don't check)."""
     if tc.expected_season is not None and result.season != tc.expected_season:
         return False
-    if tc.expected_episode is not None and result.episode != tc.expected_episode:
-        return False
-    return True
+    return not (tc.expected_episode is not None and result.episode != tc.expected_episode)
 
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestIdentificationPipeline:
     """Run the full dataset through parse_media_string and report accuracy."""

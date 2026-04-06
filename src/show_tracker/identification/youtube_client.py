@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
 DEFAULT_TIMEOUT = 10.0
 
+# YouTube Data API v3 free tier: 10,000 units/day.
+# Cost per call type: videos.list=1, playlistItems.list=1, search.list=100.
+YOUTUBE_DAILY_QUOTA = 10_000
+_QUOTA_WARN_THRESHOLD = 0.80  # warn at 80% usage
+
 
 class YouTubeError(Exception):
     """Base exception for YouTube API errors."""
@@ -32,6 +37,9 @@ class YouTubeClient:
         api_key: YouTube Data API v3 key.
         timeout: Request timeout in seconds.
     """
+
+    # Class-level quota tracker (approximate — resets on process restart).
+    _quota_used: int = 0
 
     def __init__(self, api_key: str, timeout: float = DEFAULT_TIMEOUT) -> None:
         self.api_key = api_key
@@ -51,8 +59,32 @@ class YouTubeClient:
     def __exit__(self, *args: object) -> None:
         self.close()
 
-    def _get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Execute a GET request and return the JSON response."""
+    def _get(
+        self, path: str, params: dict[str, Any] | None = None, quota_cost: int = 1
+    ) -> dict[str, Any]:
+        """Execute a GET request and return the JSON response.
+
+        Args:
+            path: API endpoint path.
+            params: Query parameters.
+            quota_cost: Units this call consumes (videos.list=1, search.list=100).
+        """
+        YouTubeClient._quota_used += quota_cost
+        used = YouTubeClient._quota_used
+        if used >= YOUTUBE_DAILY_QUOTA:
+            logger.error(
+                "YouTube API quota exhausted (%d/%d units used today)",
+                used,
+                YOUTUBE_DAILY_QUOTA,
+            )
+        elif used >= int(YOUTUBE_DAILY_QUOTA * _QUOTA_WARN_THRESHOLD):
+            logger.warning(
+                "YouTube API quota at %.0f%% (%d/%d units used today)",
+                100.0 * used / YOUTUBE_DAILY_QUOTA,
+                used,
+                YOUTUBE_DAILY_QUOTA,
+            )
+
         try:
             resp = self._client.get(path, params=params)
         except httpx.TimeoutException as exc:
@@ -78,10 +110,13 @@ class YouTubeClient:
         Returns:
             Video resource dict or None if not found.
         """
-        data = self._get("/videos", params={
-            "part": "snippet,contentDetails",
-            "id": video_id,
-        })
+        data = self._get(
+            "/videos",
+            params={
+                "part": "snippet,contentDetails",
+                "id": video_id,
+            },
+        )
         items = data.get("items", [])
         return items[0] if items else None
 
@@ -108,10 +143,13 @@ class YouTubeClient:
         Returns:
             Playlist resource dict or None.
         """
-        data = self._get("/playlists", params={
-            "part": "snippet,contentDetails",
-            "id": playlist_id,
-        })
+        data = self._get(
+            "/playlists",
+            params={
+                "part": "snippet,contentDetails",
+                "id": playlist_id,
+            },
+        )
         items = data.get("items", [])
         return items[0] if items else None
 
@@ -129,11 +167,14 @@ class YouTubeClient:
         Returns:
             List of playlist item dicts.
         """
-        data = self._get("/playlistItems", params={
-            "part": "snippet,contentDetails",
-            "playlistId": playlist_id,
-            "maxResults": min(max_results, 50),
-        })
+        data = self._get(
+            "/playlistItems",
+            params={
+                "part": "snippet,contentDetails",
+                "playlistId": playlist_id,
+                "maxResults": min(max_results, 50),
+            },
+        )
         items: list[dict[str, Any]] = data.get("items", [])
         return items
 
@@ -213,10 +254,9 @@ class YouTubeClient:
                         # Find this video's position in the playlist
                         items = self.get_playlist_items(playlist_id)
                         for i, item in enumerate(items, start=1):
-                            item_video_id = (
-                                item.get("contentDetails", {}).get("videoId")
-                                or item.get("snippet", {}).get("resourceId", {}).get("videoId")
-                            )
+                            item_video_id = item.get("contentDetails", {}).get(
+                                "videoId"
+                            ) or item.get("snippet", {}).get("resourceId", {}).get("videoId")
                             if item_video_id == video_id:
                                 result["playlist_index"] = i
                                 if result["episode_number"] is None:

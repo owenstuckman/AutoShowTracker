@@ -72,14 +72,16 @@ def check_new_episodes(
                     except ValueError:
                         continue
 
-                    if air_date == today or air_date == tomorrow:
-                        upcoming.append({
-                            "show_name": show.title,
-                            "season": ep.get("season_number"),
-                            "episode": ep.get("episode_number"),
-                            "episode_title": ep.get("name", ""),
-                            "air_date": air_date_str,
-                        })
+                    if air_date in (today, tomorrow):
+                        upcoming.append(
+                            {
+                                "show_name": show.title,
+                                "season": ep.get("season_number"),
+                                "episode": ep.get("episode_number"),
+                                "episode_title": ep.get("name", ""),
+                                "air_date": air_date_str,
+                            }
+                        )
 
             except TMDbError:
                 logger.debug("Failed to check episodes for %s", show.title)
@@ -126,9 +128,9 @@ def notify_new_episodes(db: DatabaseManager, tmdb_api_key: str) -> int:
 
     # Check if we already notified today
     with db.get_watch_session() as session:
-        setting = session.query(UserSetting).filter(
-            UserSetting.key == "last_notification_date"
-        ).first()
+        setting = (
+            session.query(UserSetting).filter(UserSetting.key == "last_notification_date").first()
+        )
 
         if setting and setting.value == today_str:
             logger.debug("Already checked for notifications today")
@@ -161,9 +163,9 @@ def notify_new_episodes(db: DatabaseManager, tmdb_api_key: str) -> int:
 def _update_notification_date(db: DatabaseManager, date_str: str) -> None:
     """Update the last notification check date in user settings."""
     with db.get_watch_session() as session:
-        setting = session.query(UserSetting).filter(
-            UserSetting.key == "last_notification_date"
-        ).first()
+        setting = (
+            session.query(UserSetting).filter(UserSetting.key == "last_notification_date").first()
+        )
 
         if setting:
             setting.value = date_str

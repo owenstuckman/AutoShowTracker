@@ -35,19 +35,23 @@ def _utcnow() -> str:
 # Base classes — one per database so metadata stays separate
 # ---------------------------------------------------------------------------
 
+
 class WatchBase(DeclarativeBase):
     """Base for all watch_history.db models."""
+
     pass
 
 
 class CacheBase(DeclarativeBase):
     """Base for all media_cache.db models."""
+
     pass
 
 
 # ===================================================================
 # watch_history.db models
 # ===================================================================
+
 
 class Show(WatchBase):
     __tablename__ = "shows"
@@ -108,9 +112,7 @@ class WatchEvent(WatchBase):
     __tablename__ = "watch_events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    episode_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("episodes.id"), nullable=False
-    )
+    episode_id: Mapped[int] = mapped_column(Integer, ForeignKey("episodes.id"), nullable=False)
     started_at: Mapped[str] = mapped_column(Text, nullable=False)
     ended_at: Mapped[str | None] = mapped_column(Text, nullable=True)
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -189,9 +191,7 @@ class ShowAlias(WatchBase):
     # Relationships
     show: Mapped[Show] = relationship("Show", back_populates="aliases")
 
-    __table_args__ = (
-        Index("idx_aliases_lookup", "alias"),
-    )
+    __table_args__ = (Index("idx_aliases_lookup", "alias"),)
 
 
 class UnresolvedEvent(WatchBase):
@@ -235,6 +235,7 @@ class UserSetting(WatchBase):
 # ===================================================================
 # media_cache.db models
 # ===================================================================
+
 
 class TMDbShowCache(CacheBase):
     __tablename__ = "tmdb_show_cache"

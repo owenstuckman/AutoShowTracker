@@ -15,7 +15,9 @@ from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _DEFAULT_DATA_DIR = Path.home() / ".show-tracker"
-_DEFAULT_SETTINGS_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "default_settings.json"
+_DEFAULT_SETTINGS_PATH = (
+    Path(__file__).resolve().parent.parent.parent / "config" / "default_settings.json"
+)
 
 
 class Settings(BaseSettings):

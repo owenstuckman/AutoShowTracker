@@ -56,6 +56,7 @@ class OCREngine(ABC):
 # Image preprocessing
 # ---------------------------------------------------------------------------
 
+
 def preprocess(
     image: Image.Image,
     *,
@@ -137,6 +138,7 @@ def _detect_dark_theme(image: Image.Image) -> bool:
 # Tesseract backend
 # ---------------------------------------------------------------------------
 
+
 class TesseractEngine(OCREngine):
     """OCR engine backed by Tesseract (via pytesseract)."""
 
@@ -156,7 +158,7 @@ class TesseractEngine(OCREngine):
             raise ImportError(
                 "pytesseract is required for TesseractEngine. "
                 "Install it with: pip install 'show-tracker[ocr]'"
-            )
+            ) from None
 
         self._lang = lang
         self._config = config
@@ -169,7 +171,9 @@ class TesseractEngine(OCREngine):
 
         try:
             data: dict[str, list[Any]] = pytesseract.image_to_data(
-                processed, lang=self._lang, config=self._config,
+                processed,
+                lang=self._lang,
+                config=self._config,
                 output_type=pytesseract.Output.DICT,
             )
         except pytesseract.TesseractError as exc:
@@ -211,6 +215,7 @@ class TesseractEngine(OCREngine):
 # EasyOCR backend
 # ---------------------------------------------------------------------------
 
+
 class EasyOCREngine(OCREngine):
     """OCR engine backed by EasyOCR.
 
@@ -233,7 +238,7 @@ class EasyOCREngine(OCREngine):
             raise ImportError(
                 "easyocr is required for EasyOCREngine. "
                 "Install it with: pip install 'show-tracker[ocr]'"
-            )
+            ) from None
 
         self._languages = languages or ["en"]
         self._gpu = gpu
@@ -245,7 +250,8 @@ class EasyOCREngine(OCREngine):
 
             logger.info(
                 "Initialising EasyOCR reader (languages=%s, gpu=%s) ...",
-                self._languages, self._gpu,
+                self._languages,
+                self._gpu,
             )
             self._reader = easyocr.Reader(self._languages, gpu=self._gpu)
         return self._reader
@@ -286,6 +292,7 @@ class EasyOCREngine(OCREngine):
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
+
 
 def get_ocr_engine(preferred: str = "tesseract") -> OCREngine:
     """Create an OCR engine, falling back if the preferred one is unavailable.

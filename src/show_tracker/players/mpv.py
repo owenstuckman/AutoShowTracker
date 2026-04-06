@@ -95,7 +95,8 @@ class MpvClient:
         if response.get("error") != "success":
             logger.debug(
                 "mpv property '%s' query failed: %s",
-                name, response.get("error"),
+                name,
+                response.get("error"),
             )
             return None
 

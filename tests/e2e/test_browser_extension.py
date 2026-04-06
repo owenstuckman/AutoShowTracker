@@ -22,10 +22,13 @@ import subprocess
 import sys
 import textwrap
 import time
-from collections.abc import Generator
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from threading import Thread
+from typing import TYPE_CHECKING, ClassVar
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 import pytest
 
@@ -47,7 +50,7 @@ API_PORT = 7600
 class _TestPageHandler(SimpleHTTPRequestHandler):
     """Serve dynamic test pages from a dict of path -> HTML."""
 
-    pages: dict[str, str] = {}
+    pages: ClassVar[dict[str, str]] = {}
 
     def do_GET(self) -> None:
         path = self.path.split("?")[0]
@@ -78,7 +81,6 @@ def _build_test_pages() -> dict[str, str]:
                        preload="auto"></video>
             </body></html>
         """),
-
         "/schema-episode": textwrap.dedent("""\
             <!DOCTYPE html>
             <html><head>
@@ -100,7 +102,6 @@ def _build_test_pages() -> dict[str, str]:
                        preload="auto"></video>
             </body></html>
         """),
-
         "/og-movie": textwrap.dedent("""\
             <!DOCTYPE html>
             <html><head>
@@ -115,7 +116,6 @@ def _build_test_pages() -> dict[str, str]:
                        preload="auto"></video>
             </body></html>
         """),
-
         "/youtube-like": textwrap.dedent("""\
             <!DOCTYPE html>
             <html><head><title>Funny Clip - YouTube</title></head>
@@ -127,7 +127,6 @@ def _build_test_pages() -> dict[str, str]:
                 </div>
             </body></html>
         """),
-
         "/netflix-url": textwrap.dedent("""\
             <!DOCTYPE html>
             <html><head><title>Stranger Things - Netflix</title></head>
@@ -137,7 +136,6 @@ def _build_test_pages() -> dict[str, str]:
                        preload="auto"></video>
             </body></html>
         """),
-
         "/no-media": textwrap.dedent("""\
             <!DOCTYPE html>
             <html><head><title>Just a blog post</title></head>
@@ -163,12 +161,21 @@ def test_server() -> Generator[str, None, None]:
 # Fixtures: API server
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="session")
 def api_server() -> Generator[str, None, None]:
     """Start the FastAPI server as a subprocess."""
     proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "show_tracker.api.app:app",
-         "--host", "127.0.0.1", "--port", str(API_PORT)],
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "show_tracker.api.app:app",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(API_PORT),
+        ],
         cwd=str(PROJECT_ROOT),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -176,6 +183,7 @@ def api_server() -> Generator[str, None, None]:
 
     # Wait for the server to be ready
     import httpx
+
     for _ in range(30):
         try:
             r = httpx.get(f"http://127.0.0.1:{API_PORT}/api/health", timeout=1.0)
@@ -195,6 +203,7 @@ def api_server() -> Generator[str, None, None]:
 # ---------------------------------------------------------------------------
 # Fixtures: Playwright browser with extension
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def browser_with_extension(test_server: str, api_server: str):
@@ -228,8 +237,10 @@ def browser_with_extension(test_server: str, api_server: str):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_currently_watching(api_base: str) -> dict:
     import httpx
+
     r = httpx.get(f"{api_base}/api/currently-watching", timeout=5.0)
     return r.json()
 
@@ -249,6 +260,7 @@ def _navigate_and_play(page, url: str, wait_seconds: float = 2.0) -> None:
 # ---------------------------------------------------------------------------
 # Tests: Content Script Metadata Extraction
 # ---------------------------------------------------------------------------
+
 
 class TestContentScriptExtraction:
     """Verify the content script extracts metadata correctly."""
@@ -343,12 +355,11 @@ class TestContentScriptExtraction:
 # Tests: Playback Events → API
 # ---------------------------------------------------------------------------
 
+
 class TestPlaybackEvents:
     """Verify playback triggers events that reach the API."""
 
-    def test_play_event_reaches_api(
-        self, browser_with_extension, test_server, api_server
-    ):
+    def test_play_event_reaches_api(self, browser_with_extension, test_server, api_server):
         """Playing a video sends a play event to the API."""
         page = browser_with_extension.new_page()
         try:
@@ -378,9 +389,7 @@ class TestPlaybackEvents:
         finally:
             page.close()
 
-    def test_schema_metadata_in_event(
-        self, browser_with_extension, test_server, api_server
-    ):
+    def test_schema_metadata_in_event(self, browser_with_extension, test_server, api_server):
         """Events from a page with schema.org include episode metadata."""
         page = browser_with_extension.new_page()
         try:
@@ -397,6 +406,7 @@ class TestPlaybackEvents:
 # ---------------------------------------------------------------------------
 # Tests: Popup UI
 # ---------------------------------------------------------------------------
+
 
 class TestPopupUI:
     """Verify the extension popup displays connection status."""

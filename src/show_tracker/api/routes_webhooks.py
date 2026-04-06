@@ -24,6 +24,7 @@ router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 # Response schema
 # ---------------------------------------------------------------------------
 
+
 class WebhookResponse(BaseModel):
     status: str = "ok"
     event: str = ""
@@ -33,6 +34,7 @@ class WebhookResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _now_iso() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
@@ -78,6 +80,7 @@ def _extract_guid_id(guids: list[dict[str, Any]], provider: str) -> int | None:
 # POST /api/webhooks/plex
 # ---------------------------------------------------------------------------
 
+
 @router.post("/plex", response_model=WebhookResponse)
 async def plex_webhook(request: Request, payload: str = Form("")) -> WebhookResponse:
     """Receive a Plex webhook event.
@@ -118,6 +121,7 @@ async def plex_webhook(request: Request, payload: str = Form("")) -> WebhookResp
 # POST /api/webhooks/jellyfin
 # ---------------------------------------------------------------------------
 
+
 @router.post("/jellyfin", response_model=WebhookResponse)
 async def jellyfin_webhook(request: Request) -> WebhookResponse:
     """Receive a Jellyfin webhook event.
@@ -138,18 +142,22 @@ async def jellyfin_webhook(request: Request) -> WebhookResponse:
     media_info: dict[str, Any] = {"media_type": media_type}
 
     if media_type == "episode":
-        media_info.update({
-            "show_name": data.get("SeriesName", ""),
-            "season": data.get("SeasonNumber"),
-            "episode": data.get("EpisodeNumber"),
-            "episode_title": data.get("Name", ""),
-            "year": data.get("Year"),
-        })
+        media_info.update(
+            {
+                "show_name": data.get("SeriesName", ""),
+                "season": data.get("SeasonNumber"),
+                "episode": data.get("EpisodeNumber"),
+                "episode_title": data.get("Name", ""),
+                "year": data.get("Year"),
+            }
+        )
     elif media_type == "movie":
-        media_info.update({
-            "title": data.get("Name", ""),
-            "year": data.get("Year"),
-        })
+        media_info.update(
+            {
+                "title": data.get("Name", ""),
+                "year": data.get("Year"),
+            }
+        )
     else:
         return WebhookResponse(status="ignored", event=event)
 
@@ -164,6 +172,7 @@ async def jellyfin_webhook(request: Request) -> WebhookResponse:
 # ---------------------------------------------------------------------------
 # POST /api/webhooks/emby
 # ---------------------------------------------------------------------------
+
 
 @router.post("/emby", response_model=WebhookResponse)
 async def emby_webhook(request: Request) -> WebhookResponse:
@@ -185,18 +194,22 @@ async def emby_webhook(request: Request) -> WebhookResponse:
     media_info: dict[str, Any] = {"media_type": media_type}
 
     if media_type == "episode":
-        media_info.update({
-            "show_name": item.get("SeriesName", ""),
-            "season": item.get("ParentIndexNumber"),
-            "episode": item.get("IndexNumber"),
-            "episode_title": item.get("Name", ""),
-            "year": item.get("ProductionYear"),
-        })
+        media_info.update(
+            {
+                "show_name": item.get("SeriesName", ""),
+                "season": item.get("ParentIndexNumber"),
+                "episode": item.get("IndexNumber"),
+                "episode_title": item.get("Name", ""),
+                "year": item.get("ProductionYear"),
+            }
+        )
     elif media_type == "movie":
-        media_info.update({
-            "title": item.get("Name", ""),
-            "year": item.get("ProductionYear"),
-        })
+        media_info.update(
+            {
+                "title": item.get("Name", ""),
+                "year": item.get("ProductionYear"),
+            }
+        )
     else:
         return WebhookResponse(status="ignored", event=event)
 
@@ -211,6 +224,7 @@ async def emby_webhook(request: Request) -> WebhookResponse:
 # ---------------------------------------------------------------------------
 # Internal: store webhook events
 # ---------------------------------------------------------------------------
+
 
 def _store_webhook_event(
     request: Request,

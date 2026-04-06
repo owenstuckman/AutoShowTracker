@@ -36,7 +36,6 @@ jobs:
 
       - name: Type check with mypy
         run: mypy src/show_tracker/
-        continue-on-error: true
 
       - name: Run tests
         run: pytest --tb=short -q

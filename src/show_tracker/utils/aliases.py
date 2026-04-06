@@ -144,11 +144,7 @@ def seed_aliases(db_session: Session) -> int:
 
     for alias_text, canonical_title in INITIAL_ALIASES.items():
         # Check if alias already exists
-        existing = (
-            db_session.query(ShowAlias)
-            .filter(ShowAlias.alias == alias_text)
-            .first()
-        )
+        existing = db_session.query(ShowAlias).filter(ShowAlias.alias == alias_text).first()
         if existing is not None:
             continue
 
@@ -156,11 +152,7 @@ def seed_aliases(db_session: Session) -> int:
         if canonical_title in show_cache:
             show = show_cache[canonical_title]
         else:
-            show_or_none = (
-                db_session.query(Show)
-                .filter(Show.title == canonical_title)
-                .first()
-            )
+            show_or_none = db_session.query(Show).filter(Show.title == canonical_title).first()
             if show_or_none is None:
                 show = Show(title=canonical_title)
                 db_session.add(show)
@@ -169,9 +161,7 @@ def seed_aliases(db_session: Session) -> int:
                 show = show_or_none
             show_cache[canonical_title] = show
 
-        db_session.add(
-            ShowAlias(show_id=show.id, alias=alias_text, source="seed")
-        )
+        db_session.add(ShowAlias(show_id=show.id, alias=alias_text, source="seed"))
         inserted += 1
 
     logger.info("Seeded %d aliases (%d total defined)", inserted, len(INITIAL_ALIASES))

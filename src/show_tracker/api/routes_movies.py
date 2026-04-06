@@ -23,12 +23,7 @@ async def get_recent_movies(
     """Return recently watched movies."""
     db = request.app.state.db
     with db.get_watch_session() as session:
-        rows = (
-            session.query(MovieWatch)
-            .order_by(MovieWatch.started_at.desc())
-            .limit(limit)
-            .all()
-        )
+        rows = session.query(MovieWatch).order_by(MovieWatch.started_at.desc()).limit(limit).all()
         return [
             MovieWatchOut(
                 id=r.id,
@@ -53,14 +48,10 @@ async def get_movie_stats(request: Request) -> MovieStats:
     with db.get_watch_session() as session:
         total_watches = session.query(func.count(MovieWatch.id)).scalar() or 0
         unique_movies = (
-            session.query(func.count(func.distinct(MovieWatch.tmdb_movie_id))).scalar()
-            or 0
+            session.query(func.count(func.distinct(MovieWatch.tmdb_movie_id))).scalar() or 0
         )
         total_time = (
-            session.query(
-                func.coalesce(func.sum(MovieWatch.duration_seconds), 0)
-            ).scalar()
-            or 0
+            session.query(func.coalesce(func.sum(MovieWatch.duration_seconds), 0)).scalar() or 0
         )
 
         return MovieStats(

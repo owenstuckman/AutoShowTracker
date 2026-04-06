@@ -12,6 +12,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -35,6 +38,7 @@ _db = DatabaseManager(data_dir=_settings.data_dir)
 # ---------------------------------------------------------------------------
 # Lifespan
 # ---------------------------------------------------------------------------
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -126,19 +130,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     def _persist_detection(event, tier):  # type: ignore[no-untyped-def]
         """Identify the detected media and persist it to the database."""
         # Build the best raw string from available metadata.
-        raw_string = (
-            event.media_title
-            or event.window_title
-            or event.page_title
-            or event.url
-        )
+        raw_string = event.media_title or event.window_title or event.page_title or event.url
         if not raw_string:
             logger.info("Persist: skipped — no raw string from event")
             return
 
         logger.info(
             "Persist: raw=%r source=%s tier=%s url=%s",
-            raw_string[:80], event.source, tier.value if tier else "?",
+            raw_string[:80],
+            event.source,
+            tier.value if tier else "?",
             (event.url or "")[:80],
         )
 
@@ -148,14 +149,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             if not video_id:
                 logger.info("Persist: YouTube URL but no video ID: %s", event.url)
                 return
-            title = (
-                event.media_title
-                or event.page_title
-                or event.window_title
-                or "Unknown"
-            )
+            title = event.media_title or event.page_title or event.window_title or "Unknown"
             # Strip common YouTube suffixes from window titles
-            title = _re.sub(r"\s*[-–]\s*YouTube\s*$", "", title).strip() or title
+            title = _re.sub(r"\s*[-\u2013]\s*YouTube\s*$", "", title).strip() or title
             try:
                 with _db.get_watch_session() as session:
                     repo = WatchRepository(session)
@@ -195,7 +191,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             with _db.get_watch_session() as session:
                 repo = WatchRepository(session)
 
-                if result.tmdb_show_id is not None and result.season is not None and result.episode is not None:
+                if (
+                    result.tmdb_show_id is not None
+                    and result.season is not None
+                    and result.episode is not None
+                ):
                     # We have a resolved episode — persist it.
                     show = repo.upsert_show(
                         tmdb_id=result.tmdb_show_id,
@@ -245,8 +245,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 else:
                     logger.info(
                         "Persist: no match — %r (tier=%s, tmdb_show=%s, season=%s, ep=%s, conf=%.2f)",
-                        raw_string[:60], tier.value if tier else "?",
-                        result.tmdb_show_id, result.season, result.episode,
+                        raw_string[:60],
+                        tier.value if tier else "?",
+                        result.tmdb_show_id,
+                        result.season,
+                        result.episode,
                         result.confidence,
                     )
         except Exception:
@@ -380,6 +383,7 @@ if _STATIC_DIR.is_dir():
 # ---------------------------------------------------------------------------
 # Top-level routes
 # ---------------------------------------------------------------------------
+
 
 @app.get("/api/health", response_model=HealthResponse, tags=["system"])
 async def health_check() -> HealthResponse:

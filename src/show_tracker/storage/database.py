@@ -7,14 +7,17 @@ Manages two SQLite databases:
 
 from __future__ import annotations
 
-from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import create_engine, event
-from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from sqlalchemy.engine import Engine
 
 from show_tracker.storage.models import CacheBase, WatchBase
 
@@ -121,9 +124,7 @@ class DatabaseManager:
         Commits on success, rolls back on exception, always closes.
         """
         if self._WatchSession is None:
-            raise RuntimeError(
-                "Databases not initialised. Call init_databases() first."
-            )
+            raise RuntimeError("Databases not initialised. Call init_databases() first.")
         session = self._WatchSession()
         try:
             yield session
@@ -141,9 +142,7 @@ class DatabaseManager:
         Commits on success, rolls back on exception, always closes.
         """
         if self._CacheSession is None:
-            raise RuntimeError(
-                "Databases not initialised. Call init_databases() first."
-            )
+            raise RuntimeError("Databases not initialised. Call init_databases() first.")
         session = self._CacheSession()
         try:
             yield session

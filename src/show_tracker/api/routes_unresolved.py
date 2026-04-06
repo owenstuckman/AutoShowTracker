@@ -25,6 +25,7 @@ router = APIRouter(prefix="/api/unresolved", tags=["unresolved"])
 # GET /api/unresolved
 # ---------------------------------------------------------------------------
 
+
 @router.get("", response_model=list[UnresolvedEventOut])
 async def list_unresolved(request: Request) -> list[UnresolvedEventOut]:
     """List all unresolved events pending manual review."""
@@ -56,6 +57,7 @@ async def list_unresolved(request: Request) -> list[UnresolvedEventOut]:
 # ---------------------------------------------------------------------------
 # POST /api/unresolved/{id}/resolve
 # ---------------------------------------------------------------------------
+
 
 @router.post("/{event_id}/resolve")
 async def resolve_event(
@@ -120,6 +122,7 @@ async def resolve_event(
 # POST /api/unresolved/{id}/dismiss
 # ---------------------------------------------------------------------------
 
+
 @router.post("/{event_id}/dismiss")
 async def dismiss_event(event_id: int, request: Request) -> dict[str, Any]:
     """Dismiss an unresolved event without assigning it to an episode."""
@@ -137,6 +140,7 @@ async def dismiss_event(event_id: int, request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # POST /api/unresolved/{id}/search
 # ---------------------------------------------------------------------------
+
 
 @router.post("/{event_id}/search", response_model=list[SearchResult])
 async def search_tmdb(

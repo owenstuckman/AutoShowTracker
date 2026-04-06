@@ -29,9 +29,7 @@ class TestYouTube:
         assert result.platform_id == "dQw4w9WgXcQ"
 
     def test_youtube_with_extra_params(self) -> None:
-        result = match_url(
-            "https://www.youtube.com/watch?v=abc123_-X&list=PLxyz&index=5"
-        )
+        result = match_url("https://www.youtube.com/watch?v=abc123_-X&list=PLxyz&index=5")
         assert result is not None
         assert result.platform == "youtube"
         assert result.platform_id == "abc123_-X"
@@ -39,9 +37,7 @@ class TestYouTube:
 
 class TestCrunchyroll:
     def test_crunchyroll_watch_url(self) -> None:
-        result = match_url(
-            "https://www.crunchyroll.com/en-us/watch/G4PH0WXVJ/the-episode-slug"
-        )
+        result = match_url("https://www.crunchyroll.com/en-us/watch/G4PH0WXVJ/the-episode-slug")
         assert result is not None
         assert result.platform == "crunchyroll"
         assert result.id_type == "crunchyroll_slug"
@@ -87,9 +83,7 @@ class TestAmazonPrime:
         assert result.platform_id == "B0ABC1234"
 
     def test_amazon_gp_video_detail_url(self) -> None:
-        result = match_url(
-            "https://www.amazon.com/gp/video/detail/B0ABC1234"
-        )
+        result = match_url("https://www.amazon.com/gp/video/detail/B0ABC1234")
         assert result is not None
         assert result.platform == "amazon_prime"
         assert result.platform_id == "B0ABC1234"
@@ -97,26 +91,20 @@ class TestAmazonPrime:
 
 class TestHBOMax:
     def test_hbo_max_url(self) -> None:
-        result = match_url(
-            "https://play.hbomax.com/page/urn:hbo:page:abc123"
-        )
+        result = match_url("https://play.hbomax.com/page/urn:hbo:page:abc123")
         assert result is not None
         assert result.platform == "hbo_max"
         assert result.id_type == "hbo_content_id"
 
     def test_max_url(self) -> None:
-        result = match_url(
-            "https://play.max.com/show/urn:hbo:show:abc123"
-        )
+        result = match_url("https://play.max.com/show/urn:hbo:show:abc123")
         assert result is not None
         assert result.platform == "hbo_max"
 
 
 class TestGenericPirateSites:
     def test_slug_with_episode_info(self) -> None:
-        result = match_url(
-            "https://pirate-site.com/watch/law-and-order-svu-s03e07"
-        )
+        result = match_url("https://pirate-site.com/watch/law-and-order-svu-s03e07")
         assert result is not None
         assert result.platform == "generic"
         assert result.id_type == "url_slug_with_episode"
@@ -125,9 +113,7 @@ class TestGenericPirateSites:
         assert result.episode == 7
 
     def test_structured_show_url(self) -> None:
-        result = match_url(
-            "https://some-site.com/show/law-and-order-svu/season-3/episode-7"
-        )
+        result = match_url("https://some-site.com/show/law-and-order-svu/season-3/episode-7")
         assert result is not None
         assert result.platform == "generic"
         assert result.id_type == "url_structured"
@@ -136,9 +122,7 @@ class TestGenericPirateSites:
         assert result.episode == 7
 
     def test_structured_series_url(self) -> None:
-        result = match_url(
-            "https://streamsite.io/series/breaking-bad/season2/episode3"
-        )
+        result = match_url("https://streamsite.io/series/breaking-bad/season2/episode3")
         assert result is not None
         assert result.platform == "generic"
         assert result.id_type == "url_structured"
@@ -147,9 +131,7 @@ class TestGenericPirateSites:
         assert result.episode == 3
 
     def test_stream_verb(self) -> None:
-        result = match_url(
-            "https://example.com/stream/some-show-s01e05"
-        )
+        result = match_url("https://example.com/stream/some-show-s01e05")
         assert result is not None
         assert result.platform == "generic"
         assert result.season == 1
@@ -181,8 +163,6 @@ class TestUrlMatchResultDefaults:
         assert result.slug is None
 
     def test_generic_has_no_platform_id(self) -> None:
-        result = match_url(
-            "https://example.com/show/some-show/season-1/episode-1"
-        )
+        result = match_url("https://example.com/show/some-show/season-1/episode-1")
         assert result is not None
         assert result.platform_id is None

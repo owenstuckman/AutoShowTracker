@@ -359,24 +359,26 @@ class TestBrowserEventHandler:
         from show_tracker.detection.browser_handler import BrowserEventHandler
 
         handler = BrowserEventHandler()
-        event = handler.handle_event({
-            "type": "play",
-            "tab_url": "https://example.com/watch",
-            "timestamp": 1700000000000,
-            "metadata": {
-                "schema": [
-                    {
-                        "type": "TVEpisode",
-                        "name": "Pilot",
-                        "seriesName": "Test Show",
-                        "seasonNumber": 1,
-                        "episodeNumber": 1,
-                    }
-                ],
-                "og": {"title": "Wrong Title"},
-                "title": "Also Wrong",
-            },
-        })
+        event = handler.handle_event(
+            {
+                "type": "play",
+                "tab_url": "https://example.com/watch",
+                "timestamp": 1700000000000,
+                "metadata": {
+                    "schema": [
+                        {
+                            "type": "TVEpisode",
+                            "name": "Pilot",
+                            "seriesName": "Test Show",
+                            "seasonNumber": 1,
+                            "episodeNumber": 1,
+                        }
+                    ],
+                    "og": {"title": "Wrong Title"},
+                    "title": "Also Wrong",
+                },
+            }
+        )
         assert event.metadata_source == "schema_org"
         assert event.title == "Pilot"
         assert event.show_name == "Test Show"
@@ -385,14 +387,16 @@ class TestBrowserEventHandler:
         from show_tracker.detection.browser_handler import BrowserEventHandler
 
         handler = BrowserEventHandler()
-        event = handler.handle_event({
-            "type": "play",
-            "tab_url": "https://example.com/watch",
-            "metadata": {
-                "og": {"title": "OG Title S02E03", "type": "video.episode"},
-                "title": "Page Title",
-            },
-        })
+        event = handler.handle_event(
+            {
+                "type": "play",
+                "tab_url": "https://example.com/watch",
+                "metadata": {
+                    "og": {"title": "OG Title S02E03", "type": "video.episode"},
+                    "title": "Page Title",
+                },
+            }
+        )
         assert event.metadata_source == "open_graph"
         assert event.season_number == 2
         assert event.episode_number == 3
@@ -401,11 +405,13 @@ class TestBrowserEventHandler:
         from show_tracker.detection.browser_handler import BrowserEventHandler
 
         handler = BrowserEventHandler()
-        event = handler.handle_event({
-            "type": "page_load",
-            "tab_url": "https://unknown-site.com/watch",
-            "metadata": {"title": "My Show S01E05 - Some Episode"},
-        })
+        event = handler.handle_event(
+            {
+                "type": "page_load",
+                "tab_url": "https://unknown-site.com/watch",
+                "metadata": {"title": "My Show S01E05 - Some Episode"},
+            }
+        )
         assert event.metadata_source == "page_title"
         assert event.season_number == 1
         assert event.episode_number == 5
@@ -414,20 +420,22 @@ class TestBrowserEventHandler:
         from show_tracker.detection.browser_handler import BrowserEventHandler
 
         handler = BrowserEventHandler()
-        event = handler.handle_event({
-            "type": "heartbeat",
-            "tab_url": "https://example.com/watch",
-            "metadata": {
-                "title": "Playing Video",
-                "video": [
-                    {
-                        "playing": True,
-                        "currentTime": 120.5,
-                        "duration": 3600.0,
-                    }
-                ],
-            },
-        })
+        event = handler.handle_event(
+            {
+                "type": "heartbeat",
+                "tab_url": "https://example.com/watch",
+                "metadata": {
+                    "title": "Playing Video",
+                    "video": [
+                        {
+                            "playing": True,
+                            "currentTime": 120.5,
+                            "duration": 3600.0,
+                        }
+                    ],
+                },
+            }
+        )
         assert event.is_playing is True
         assert event.position_seconds == 120.5
         assert event.duration_seconds == 3600.0
@@ -445,10 +453,12 @@ class TestBrowserEventHandler:
         from show_tracker.detection.browser_handler import BrowserEventHandler
 
         handler = BrowserEventHandler()
-        event = handler.handle_event({
-            "tab_url": "https://www.netflix.com/watch/12345",
-            "metadata": {"title": "Some show"},
-        })
+        event = handler.handle_event(
+            {
+                "tab_url": "https://www.netflix.com/watch/12345",
+                "metadata": {"title": "Some show"},
+            }
+        )
         assert event.domain == "netflix.com"
 
 
@@ -925,8 +935,16 @@ class TestYouTubeUrlDetection:
                 return m.group(1)
             return None
 
-        assert _extract_youtube_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ") == "dQw4w9WgXcQ"
+        assert (
+            _extract_youtube_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+            == "dQw4w9WgXcQ"
+        )
         assert _extract_youtube_video_id("https://youtu.be/dQw4w9WgXcQ") == "dQw4w9WgXcQ"
-        assert _extract_youtube_video_id("https://www.youtube.com/embed/dQw4w9WgXcQ") == "dQw4w9WgXcQ"
-        assert _extract_youtube_video_id("https://www.youtube.com/watch?v=VrSFMyEso-M&list=RD") == "VrSFMyEso-M"
+        assert (
+            _extract_youtube_video_id("https://www.youtube.com/embed/dQw4w9WgXcQ") == "dQw4w9WgXcQ"
+        )
+        assert (
+            _extract_youtube_video_id("https://www.youtube.com/watch?v=VrSFMyEso-M&list=RD")
+            == "VrSFMyEso-M"
+        )
         assert _extract_youtube_video_id("https://www.youtube.com/") is None

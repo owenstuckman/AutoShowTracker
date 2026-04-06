@@ -83,9 +83,7 @@ def setup_logging(
             encoding="utf-8",
         )
         file_handler.setLevel(logging.DEBUG)  # always capture everything to disk
-        file_handler.setFormatter(
-            logging.Formatter(_FILE_FORMAT, datefmt=_DATE_FORMAT)
-        )
+        file_handler.setFormatter(logging.Formatter(_FILE_FORMAT, datefmt=_DATE_FORMAT))
         root_logger.addHandler(file_handler)
 
     # Stop propagation to the root logger to avoid duplicate output when

@@ -135,9 +135,7 @@ class TestEstimateConfidence:
         assert self.svc._estimate_confidence(event) == 0.5  # 0.4 + 0.1
 
     def test_known_media_app_boost_capped_at_1(self):
-        event = DetectionEvent(
-            show_name="X", season_number=1, episode_number=1, app_name="vlc"
-        )
+        event = DetectionEvent(show_name="X", season_number=1, episode_number=1, app_name="vlc")
         assert self.svc._estimate_confidence(event) == 0.95  # 0.85 + 0.1
 
     def test_unknown_app_no_boost(self):
@@ -332,8 +330,7 @@ class TestGracePeriodSweeper:
         # Manually run sweeper logic (without async loop)
         now = time.monotonic()
         stale = [
-            k for k, w in svc._active_watches.items()
-            if now - w.last_heartbeat > svc._grace_period
+            k for k, w in svc._active_watches.items() if now - w.last_heartbeat > svc._grace_period
         ]
         for k in stale:
             svc._finalize_watch(k)
@@ -347,8 +344,7 @@ class TestGracePeriodSweeper:
 
         now = time.monotonic()
         stale = [
-            k for k, w in svc._active_watches.items()
-            if now - w.last_heartbeat > svc._grace_period
+            k for k, w in svc._active_watches.items() if now - w.last_heartbeat > svc._grace_period
         ]
         assert len(stale) == 0
         assert len(svc._active_watches) == 1
@@ -528,11 +524,13 @@ class TestEventPoller:
         mock = MockActivityWatchClient()
         # Inject event with explicit past timestamp
         old_ts = datetime.now(UTC) - timedelta(seconds=10)
-        mock.mock_events.append({
-            "timestamp": old_ts.isoformat(),
-            "duration": 10.0,
-            "data": {"app": "vlc", "title": "Show A"},
-        })
+        mock.mock_events.append(
+            {
+                "timestamp": old_ts.isoformat(),
+                "duration": 10.0,
+                "data": {"app": "vlc", "title": "Show A"},
+            }
+        )
 
         poller = EventPoller(mock)
         first = poller.poll_new_events("bucket-1")
@@ -541,11 +539,13 @@ class TestEventPoller:
 
         # Inject event with a later timestamp
         new_ts = datetime.now(UTC) + timedelta(seconds=1)
-        mock.mock_events.append({
-            "timestamp": new_ts.isoformat(),
-            "duration": 10.0,
-            "data": {"app": "vlc", "title": "Show B"},
-        })
+        mock.mock_events.append(
+            {
+                "timestamp": new_ts.isoformat(),
+                "duration": 10.0,
+                "data": {"app": "vlc", "title": "Show B"},
+            }
+        )
         second = poller.poll_new_events("bucket-1")
         assert len(second) >= 1
 
@@ -625,21 +625,25 @@ class TestMockActivityWatchClient:
         mock = MockActivityWatchClient()
         # Old event with explicit past timestamp
         old_ts = datetime.now(UTC) - timedelta(seconds=10)
-        mock.mock_events.append({
-            "timestamp": old_ts.isoformat(),
-            "duration": 10.0,
-            "data": {"app": "vlc", "title": "Old Event"},
-        })
+        mock.mock_events.append(
+            {
+                "timestamp": old_ts.isoformat(),
+                "duration": 10.0,
+                "data": {"app": "vlc", "title": "Old Event"},
+            }
+        )
 
         cutoff = datetime.now(UTC) - timedelta(seconds=5)
 
         # New event with explicit future timestamp
         new_ts = datetime.now(UTC) + timedelta(seconds=1)
-        mock.mock_events.append({
-            "timestamp": new_ts.isoformat(),
-            "duration": 10.0,
-            "data": {"app": "vlc", "title": "New Event"},
-        })
+        mock.mock_events.append(
+            {
+                "timestamp": new_ts.isoformat(),
+                "duration": 10.0,
+                "data": {"app": "vlc", "title": "New Event"},
+            }
+        )
 
         events = mock.get_events_since("b", cutoff)
         titles = [e["data"]["title"] for e in events]
@@ -665,7 +669,13 @@ class TestBrowserEventHandling:
                 "title": "Stranger Things S01E01",
                 "schema": [],
                 "og": {},
-                "video": [{"playing": event_type in ("play", "heartbeat"), "currentTime": 10.0, "duration": 3600.0}],
+                "video": [
+                    {
+                        "playing": event_type in ("play", "heartbeat"),
+                        "currentTime": 10.0,
+                        "duration": 3600.0,
+                    }
+                ],
             },
         }
 

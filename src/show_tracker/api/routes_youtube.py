@@ -24,10 +24,7 @@ async def get_recent_youtube(
     db = request.app.state.db
     with db.get_watch_session() as session:
         rows = (
-            session.query(YouTubeWatch)
-            .order_by(YouTubeWatch.started_at.desc())
-            .limit(limit)
-            .all()
+            session.query(YouTubeWatch).order_by(YouTubeWatch.started_at.desc()).limit(limit).all()
         )
         return [
             YouTubeWatchOut(
@@ -51,12 +48,10 @@ async def get_youtube_stats(request: Request) -> YouTubeStats:
     with db.get_watch_session() as session:
         total_videos = session.query(func.count(YouTubeWatch.id)).scalar() or 0
         unique_videos = (
-            session.query(func.count(func.distinct(YouTubeWatch.video_id))).scalar()
-            or 0
+            session.query(func.count(func.distinct(YouTubeWatch.video_id))).scalar() or 0
         )
         total_time = (
-            session.query(func.coalesce(func.sum(YouTubeWatch.watched_seconds), 0)).scalar()
-            or 0
+            session.query(func.coalesce(func.sum(YouTubeWatch.watched_seconds), 0)).scalar() or 0
         )
 
         # Top channels
@@ -76,8 +71,5 @@ async def get_youtube_stats(request: Request) -> YouTubeStats:
             total_watches=total_videos,
             unique_videos=unique_videos,
             total_watch_seconds=total_time,
-            top_channels=[
-                {"channel": r.channel_name, "count": r.count}
-                for r in top_channels_rows
-            ],
+            top_channels=[{"channel": r.channel_name, "count": r.count} for r in top_channels_rows],
         )

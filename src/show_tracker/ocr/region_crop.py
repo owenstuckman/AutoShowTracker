@@ -11,9 +11,10 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from PIL import Image
+if TYPE_CHECKING:
+    from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -112,9 +113,7 @@ def _parse_profile(entry: dict[str, Any]) -> AppProfile:
     )
 
 
-def find_profile(
-    app_name: str, profiles: dict[str, AppProfile]
-) -> AppProfile | None:
+def find_profile(app_name: str, profiles: dict[str, AppProfile]) -> AppProfile | None:
     """Find a matching profile for the given application name.
 
     Performs case-insensitive matching against both the canonical app_name
@@ -148,9 +147,7 @@ def find_profile(
     return None
 
 
-def crop_regions(
-    image: Image.Image, profile: AppProfile
-) -> list[tuple[str, Image.Image]]:
+def crop_regions(image: Image.Image, profile: AppProfile) -> list[tuple[str, Image.Image]]:
     """Crop the named regions from an image according to a profile.
 
     Parameters
@@ -187,7 +184,13 @@ def crop_regions(
         results.append((region.name, cropped))
         logger.debug(
             "Cropped region '%s': (%d, %d, %d, %d) from %dx%d image",
-            region.name, x, y, x2, y2, img_w, img_h,
+            region.name,
+            x,
+            y,
+            x2,
+            y2,
+            img_w,
+            img_h,
         )
 
     return results

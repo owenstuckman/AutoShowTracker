@@ -36,6 +36,7 @@ def _get_trakt_client(request: Request) -> TraktClient:
 # POST /api/sync/trakt/auth — Start device auth flow
 # ---------------------------------------------------------------------------
 
+
 @router.post("/auth")
 async def start_auth(request: Request) -> dict[str, str]:
     """Start the Trakt OAuth2 device flow.
@@ -61,6 +62,7 @@ async def start_auth(request: Request) -> dict[str, str]:
 # GET /api/sync/trakt/status — Check connection status
 # ---------------------------------------------------------------------------
 
+
 @router.get("/status")
 async def connection_status(request: Request) -> dict[str, bool]:
     """Check whether Trakt is currently authenticated."""
@@ -74,6 +76,7 @@ async def connection_status(request: Request) -> dict[str, bool]:
 # ---------------------------------------------------------------------------
 # POST /api/sync/trakt/sync — Trigger manual import from Trakt
 # ---------------------------------------------------------------------------
+
 
 @router.post("/sync")
 async def manual_sync(request: Request) -> dict[str, Any]:
@@ -97,6 +100,7 @@ async def manual_sync(request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # DELETE /api/sync/trakt/disconnect — Remove stored token
 # ---------------------------------------------------------------------------
+
 
 @router.delete("/disconnect")
 async def disconnect(request: Request) -> dict[str, str]:

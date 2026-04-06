@@ -33,14 +33,7 @@ if sys.platform != "win32":
 else:
     try:
         from winsdk.windows.media.control import (  # type: ignore[import-not-found,import-untyped,unused-ignore]
-            GlobalSystemMediaTransportControlsSession as Session,
-        )
-        from winsdk.windows.media.control import (  # type: ignore[import-not-found,import-untyped,unused-ignore]
             GlobalSystemMediaTransportControlsSessionManager as SessionManager,
-        )
-        from winsdk.windows.media.control import (  # type: ignore[import-not-found,import-untyped,unused-ignore]
-            MediaPropertiesChangedEventArgs,
-            PlaybackInfoChangedEventArgs,
         )
 
         _WINSDK_AVAILABLE = True
@@ -91,8 +84,7 @@ class SMTCListener:
     def __init__(self) -> None:
         if sys.platform != "win32":
             raise RuntimeError(
-                "SMTCListener is only supported on Windows. "
-                f"Current platform: {sys.platform!r}"
+                f"SMTCListener is only supported on Windows. Current platform: {sys.platform!r}"
             )
         if not _WINSDK_AVAILABLE:
             raise ImportError(
@@ -145,12 +137,8 @@ class SMTCListener:
             return
 
         self._session = session
-        token_props = session.add_media_properties_changed(
-            self._on_media_properties_changed
-        )
-        token_playback = session.add_playback_info_changed(
-            self._on_playback_info_changed
-        )
+        token_props = session.add_media_properties_changed(self._on_media_properties_changed)
+        token_playback = session.add_playback_info_changed(self._on_playback_info_changed)
         self._event_tokens = [token_props, token_playback]
         logger.debug("Attached to SMTC session: %s", session.source_app_user_model_id)
 

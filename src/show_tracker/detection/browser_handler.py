@@ -9,6 +9,7 @@ service can feed into the parsing/identification layers.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import re
 from dataclasses import dataclass, field
@@ -100,9 +101,7 @@ _URL_PATTERNS: list[tuple[str, re.Pattern[str], list[str]]] = [
     # Generic: slug with SxxExx pattern
     (
         "generic_sxxexx",
-        re.compile(
-            r"/(?P<slug>[^/]*[Ss]\d{1,2}[Ee]\d{1,2}[^/]*)"
-        ),
+        re.compile(r"/(?P<slug>[^/]*[Ss]\d{1,2}[Ee]\d{1,2}[^/]*)"),
         ["slug"],
     ),
 ]
@@ -125,9 +124,7 @@ def _match_url(url: str) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 
 # Season/episode regex for page titles and slugs.
-_SXXEXX_RE = re.compile(
-    r"[Ss](?P<season>\d{1,2})\s*[Ee](?P<episode>\d{1,2})"
-)
+_SXXEXX_RE = re.compile(r"[Ss](?P<season>\d{1,2})\s*[Ee](?P<episode>\d{1,2})")
 
 _SEASON_EPISODE_WORDS_RE = re.compile(
     r"[Ss]eason\s+(?P<season>\d{1,2}).*?[Ee]pisode\s+(?P<episode>\d{1,2})",
@@ -216,7 +213,12 @@ def _extract_from_open_graph(og: dict[str, str]) -> dict[str, Any] | None:
 def _extract_from_page_title(page_title: str) -> dict[str, Any]:
     """Extract whatever we can from the raw page title (lowest priority)."""
     # Strip common suffixes like " | Netflix", " - YouTube"
-    cleaned = re.sub(r"\s*[\|\-\u2013\u2014]\s*(Netflix|YouTube|Hulu|Crunchyroll|Disney\+|Amazon|Prime Video)\s*$", "", page_title, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"\s*[\|\-\u2013\u2014]\s*(Netflix|YouTube|Hulu|Crunchyroll|Disney\+|Amazon|Prime Video)\s*$",
+        "",
+        page_title,
+        flags=re.IGNORECASE,
+    )
     season, episode = _extract_season_episode(cleaned)
 
     return {
@@ -265,10 +267,8 @@ class BrowserEventHandler:
 
         timestamp = datetime.now(UTC)
         if timestamp_ms is not None:
-            try:
+            with contextlib.suppress(ValueError, TypeError, OSError):
                 timestamp = datetime.fromtimestamp(int(timestamp_ms) / 1000, tz=UTC)
-            except (ValueError, TypeError, OSError):
-                pass
 
         # Playback state from video element inspection.
         video_info = metadata.get("video", [])

@@ -8,12 +8,15 @@ sessions and encapsulate all query logic.
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from sqlalchemy.orm import Session
 
 from show_tracker.storage.models import (
     Episode,
@@ -33,6 +36,7 @@ from show_tracker.storage.models import (
 # ===================================================================
 # WatchRepository — operates on watch_history.db
 # ===================================================================
+
 
 class WatchRepository:
     """Data access methods for the watch_history database."""
@@ -197,9 +201,9 @@ class WatchRepository:
             The extended or newly created ``WatchEvent``.
         """
         now = _utcnow()
-        cutoff = (
-            datetime.now(UTC) - timedelta(minutes=gap_threshold_minutes)
-        ).strftime("%Y-%m-%d %H:%M:%S")
+        cutoff = (datetime.now(UTC) - timedelta(minutes=gap_threshold_minutes)).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
 
         # Find the most recent open event for this episode within the gap
         recent = self._session.execute(
@@ -349,8 +353,7 @@ class WatchRepository:
             .join(Episode, Episode.show_id == Show.id)
             .outerjoin(
                 WatchEvent,
-                (WatchEvent.episode_id == Episode.id)
-                & (WatchEvent.completed.is_(True)),
+                (WatchEvent.episode_id == Episode.id) & (WatchEvent.completed.is_(True)),
             )
             .where(WatchEvent.id.is_(None), Show.id.in_(select(watched_shows)))
             .group_by(Show.id)
@@ -370,9 +373,7 @@ class WatchRepository:
         )
         return list(self._session.execute(stmt).scalars().all())
 
-    def resolve_event(
-        self, event_id: int, episode_id: int | None = None
-    ) -> UnresolvedEvent | None:
+    def resolve_event(self, event_id: int, episode_id: int | None = None) -> UnresolvedEvent | None:
         """Mark an unresolved event as resolved, optionally linking to an episode.
 
         Args:
@@ -444,9 +445,7 @@ class WatchRepository:
 
     # ----- Aliases ---------------------------------------------------
 
-    def add_alias(
-        self, show_id: int, alias: str, source: str = "system"
-    ) -> ShowAlias:
+    def add_alias(self, show_id: int, alias: str, source: str = "system") -> ShowAlias:
         """Add an alias for a show. Raises on duplicate alias."""
         sa = ShowAlias(show_id=show_id, alias=alias, source=source)
         self._session.add(sa)
@@ -472,10 +471,13 @@ class WatchRepository:
 # CacheRepository — operates on media_cache.db
 # ===================================================================
 
+
 class CacheRepository:
     """Data access methods for the media_cache database."""
 
     DEFAULT_EXPIRY_HOURS: int = 24 * 7  # 1 week
+    # TMDb ToS requires cached data not be kept longer than 6 months (4380 hours).
+    TMDB_MAX_CACHE_HOURS: int = 24 * 30 * 6  # 6 months
 
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -502,18 +504,14 @@ class CacheRepository:
         if expiry_hours is None:
             expiry_hours = CacheRepository.DEFAULT_EXPIRY_HOURS
         try:
-            fetched = datetime.strptime(fetched_at, "%Y-%m-%d %H:%M:%S").replace(
-                tzinfo=UTC
-            )
+            fetched = datetime.strptime(fetched_at, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
         except ValueError:
             return False
         return datetime.now(UTC) - fetched < timedelta(hours=expiry_hours)
 
     # ----- Search cache ----------------------------------------------
 
-    def get_cached_search(
-        self, query: str, expiry_hours: int | None = None
-    ) -> list[int] | None:
+    def get_cached_search(self, query: str, expiry_hours: int | None = None) -> list[int] | None:
         """Return cached TMDb IDs for a search query, or None if stale/missing.
 
         Args:
@@ -551,7 +549,12 @@ class CacheRepository:
     def get_cached_show(
         self, tmdb_id: int, expiry_hours: int | None = None
     ) -> dict[str, Any] | None:
-        """Return cached TMDb show data as a dict, or None if stale/missing."""
+        """Return cached TMDb show data as a dict, or None if stale/missing.
+
+        TMDb ToS requires cached data not be kept longer than 6 months.
+        """
+        if expiry_hours is None:
+            expiry_hours = self.TMDB_MAX_CACHE_HOURS
         entry = self._session.get(TMDbShowCache, tmdb_id)
         if entry is None or not self.is_cache_fresh(entry.fetched_at, expiry_hours):
             return None
@@ -580,7 +583,12 @@ class CacheRepository:
     def get_cached_episode(
         self, tmdb_episode_id: int, expiry_hours: int | None = None
     ) -> dict[str, Any] | None:
-        """Return cached TMDb episode data as a dict, or None if stale/missing."""
+        """Return cached TMDb episode data as a dict, or None if stale/missing.
+
+        TMDb ToS requires cached data not be kept longer than 6 months.
+        """
+        if expiry_hours is None:
+            expiry_hours = self.TMDB_MAX_CACHE_HOURS
         entry = self._session.get(TMDbEpisodeCache, tmdb_episode_id)
         if entry is None or not self.is_cache_fresh(entry.fetched_at, expiry_hours):
             return None
@@ -620,9 +628,7 @@ class CacheRepository:
 
     # ----- Failed lookups --------------------------------------------
 
-    def get_failed_lookup(
-        self, query: str, expiry_hours: int = 24
-    ) -> FailedLookup | None:
+    def get_failed_lookup(self, query: str, expiry_hours: int = 24) -> FailedLookup | None:
         """Return a failed lookup if it exists and hasn't expired.
 
         Default expiry is 24 hours — prevents hammering the API for
@@ -635,9 +641,7 @@ class CacheRepository:
             return None
         return entry
 
-    def record_failed_lookup(
-        self, query: str, reason: str = "no_results"
-    ) -> FailedLookup:
+    def record_failed_lookup(self, query: str, reason: str = "no_results") -> FailedLookup:
         """Record or update a failed lookup entry."""
         entry = self._session.get(FailedLookup, query)
         now = _utcnow()

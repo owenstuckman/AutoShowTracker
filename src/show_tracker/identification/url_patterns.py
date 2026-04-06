@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +55,7 @@ _URL_PATTERNS: list[tuple[re.Pattern[str], str, str, Callable[[re.Match[str]], d
     ),
     # Plex: web interface with metadata key
     (
-        re.compile(
-            r"plex\.tv/web/.*key=%2Flibrary%2Fmetadata%2F(\d+)", re.IGNORECASE
-        ),
+        re.compile(r"plex\.tv/web/.*key=%2Flibrary%2Fmetadata%2F(\d+)", re.IGNORECASE),
         "plex",
         "plex_metadata_key",
         lambda m: {"platform_id": m.group(1)},
@@ -93,9 +93,7 @@ _URL_PATTERNS: list[tuple[re.Pattern[str], str, str, Callable[[re.Match[str]], d
     # Generic pirate: URL slug containing SxxExx pattern
     # e.g., /watch/law-and-order-svu-s03e07
     (
-        re.compile(
-            r"/(?:watch|stream|play|view)/([a-z0-9-]+-s(\d{1,2})e(\d{1,2}))", re.IGNORECASE
-        ),
+        re.compile(r"/(?:watch|stream|play|view)/([a-z0-9-]+-s(\d{1,2})e(\d{1,2}))", re.IGNORECASE),
         "generic",
         "url_slug_with_episode",
         lambda m: {
@@ -106,9 +104,7 @@ _URL_PATTERNS: list[tuple[re.Pattern[str], str, str, Callable[[re.Match[str]], d
     ),
     # Generic pirate: structured /show/<slug>/season-<n>/episode-<n>
     (
-        re.compile(
-            r"/(?:show|series|tv)/([a-z0-9-]+)/season-?(\d+)/episode-?(\d+)", re.IGNORECASE
-        ),
+        re.compile(r"/(?:show|series|tv)/([a-z0-9-]+)/season-?(\d+)/episode-?(\d+)", re.IGNORECASE),
         "generic",
         "url_structured",
         lambda m: {

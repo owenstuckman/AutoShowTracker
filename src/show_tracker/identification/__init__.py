@@ -63,6 +63,7 @@ async def identify_media(
     """
     if settings is None:
         from show_tracker.config import load_settings
+
         settings = load_settings()
 
     if not settings.has_tmdb_key():
@@ -116,16 +117,14 @@ async def identify_media(
         client.close()
 
 
-def _try_youtube_enrichment(
-    video_id: str, api_key: str
-) -> dict[str, Any] | None:
+def _try_youtube_enrichment(video_id: str, api_key: str) -> dict[str, Any] | None:
     """Try to get series info from YouTube Data API.
 
     Returns enrichment data if the video looks like part of a series,
     or None otherwise.
     """
     try:
-        from show_tracker.identification.youtube_client import YouTubeClient, YouTubeError
+        from show_tracker.identification.youtube_client import YouTubeClient
 
         yt = YouTubeClient(api_key=api_key)
         try:

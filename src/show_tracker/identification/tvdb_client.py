@@ -231,9 +231,7 @@ class TVDbClient:
             # If not found in first page, try paginating
             page = 1
             while True:
-                result = self.get_series_episodes(
-                    tvdb_id, season_type="absolute", page=page
-                )
+                result = self.get_series_episodes(tvdb_id, season_type="absolute", page=page)
                 episodes = result.get("episodes", [])
                 if not episodes:
                     break
@@ -249,7 +247,8 @@ class TVDbClient:
         except TVDbError:
             logger.debug(
                 "Failed to map absolute ep %d for TVDb series %d",
-                absolute_number, tvdb_id,
+                absolute_number,
+                tvdb_id,
                 exc_info=True,
             )
 

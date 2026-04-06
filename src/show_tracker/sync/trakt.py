@@ -81,9 +81,12 @@ class TraktClient:
             Dict with user_code, verification_url, device_code, expires_in,
             interval (seconds between polls).
         """
-        resp = self._client.post("/oauth/device/code", json={
-            "client_id": self.client_id,
-        })
+        resp = self._client.post(
+            "/oauth/device/code",
+            json={
+                "client_id": self.client_id,
+            },
+        )
         if not resp.is_success:
             raise TraktError(f"Device auth failed: {resp.status_code}")
         result: dict[str, Any] = resp.json()
@@ -103,17 +106,22 @@ class TraktClient:
         deadline = time.time() + timeout
 
         while time.time() < deadline:
-            resp = self._client.post("/oauth/device/token", json={
-                "code": device_code,
-                "client_id": self.client_id,
-                "client_secret": self.client_secret,
-            })
+            resp = self._client.post(
+                "/oauth/device/token",
+                json={
+                    "code": device_code,
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret,
+                },
+            )
 
             if resp.status_code == 200:
                 data = resp.json()
                 self._access_token = data["access_token"]
                 self._refresh_token = data.get("refresh_token")
-                self._expires_at = data.get("created_at", time.time()) + data.get("expires_in", 7776000)
+                self._expires_at = data.get("created_at", time.time()) + data.get(
+                    "expires_in", 7776000
+                )
                 self._save_token()
                 logger.info("Trakt authentication successful")
                 return True
@@ -204,18 +212,24 @@ class TraktClient:
             progress: Playback progress percentage (0-100).
         """
         self._ensure_auth()
-        return self._authed_post("/scrobble/start", json={
-            "episode": {"ids": episode_ids},
-            "progress": progress,
-        })
+        return self._authed_post(
+            "/scrobble/start",
+            json={
+                "episode": {"ids": episode_ids},
+                "progress": progress,
+            },
+        )
 
     def scrobble_stop(self, episode_ids: dict[str, Any], progress: float = 100.0) -> dict[str, Any]:
         """Send a scrobble stop event to Trakt."""
         self._ensure_auth()
-        return self._authed_post("/scrobble/stop", json={
-            "episode": {"ids": episode_ids},
-            "progress": progress,
-        })
+        return self._authed_post(
+            "/scrobble/stop",
+            json={
+                "episode": {"ids": episode_ids},
+                "progress": progress,
+            },
+        )
 
     def add_to_history(self, episodes: list[dict[str, Any]]) -> dict[str, Any]:
         """Batch-add episodes to Trakt watch history.
@@ -224,9 +238,12 @@ class TraktClient:
             episodes: List of episode dicts, each with "ids" and "watched_at".
         """
         self._ensure_auth()
-        return self._authed_post("/sync/history", json={
-            "episodes": episodes,
-        })
+        return self._authed_post(
+            "/sync/history",
+            json={
+                "episodes": episodes,
+            },
+        )
 
     # -- Internal -----------------------------------------------------------
 
@@ -240,13 +257,16 @@ class TraktClient:
         if not self._refresh_token:
             raise TraktAuthError("No refresh token available. Re-authenticate.")
 
-        resp = self._client.post("/oauth/token", json={
-            "refresh_token": self._refresh_token,
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
-            "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
-            "grant_type": "refresh_token",
-        })
+        resp = self._client.post(
+            "/oauth/token",
+            json={
+                "refresh_token": self._refresh_token,
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
+                "grant_type": "refresh_token",
+            },
+        )
 
         if not resp.is_success:
             raise TraktAuthError(f"Token refresh failed: {resp.status_code}")
@@ -310,6 +330,7 @@ class TraktClient:
 # ---------------------------------------------------------------------------
 # High-level import/sync helpers
 # ---------------------------------------------------------------------------
+
 
 def import_from_trakt(
     trakt_client: TraktClient,
@@ -440,9 +461,7 @@ def export_to_trakt(
 
     with db.get_watch_session() as session:
         # Get last sync timestamp
-        setting = session.query(UserSetting).filter(
-            UserSetting.key == "trakt_last_sync"
-        ).first()
+        setting = session.query(UserSetting).filter(UserSetting.key == "trakt_last_sync").first()
         last_sync = setting.value if setting else "1970-01-01T00:00:00Z"
 
         # Find unsyncced completed watch events
@@ -465,21 +484,27 @@ def export_to_trakt(
         # Build batch for Trakt API
         episodes_batch = []
         for watch, episode, show in events:
-            episodes_batch.append({
-                "ids": {"tmdb": show.tmdb_id},
-                "watched_at": watch.started_at,
-                "seasons": [{
-                    "number": episode.season_number,
-                    "episodes": [{
-                        "number": episode.episode_number,
-                        "watched_at": watch.started_at,
-                    }],
-                }],
-            })
+            episodes_batch.append(
+                {
+                    "ids": {"tmdb": show.tmdb_id},
+                    "watched_at": watch.started_at,
+                    "seasons": [
+                        {
+                            "number": episode.season_number,
+                            "episodes": [
+                                {
+                                    "number": episode.episode_number,
+                                    "watched_at": watch.started_at,
+                                }
+                            ],
+                        }
+                    ],
+                }
+            )
 
         # Send to Trakt in batches of 100
         for i in range(0, len(episodes_batch), 100):
-            batch = episodes_batch[i:i + 100]
+            batch = episodes_batch[i : i + 100]
             try:
                 trakt_client.add_to_history(batch)
                 stats["exported"] += len(batch)

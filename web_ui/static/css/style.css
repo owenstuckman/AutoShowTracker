@@ -170,6 +170,18 @@ button {
     color: var(--text-muted);
 }
 
+.attribution {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.attribution a {
+    color: var(--text-muted);
+    text-decoration: underline;
+}
+
 .conn-dot {
     width: 8px;
     height: 8px;

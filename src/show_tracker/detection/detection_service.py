@@ -348,9 +348,10 @@ class DetectionService:
         if key in self._active_watches:
             # Heartbeat: extend the existing watch.
             watch = self._active_watches[key]
+            old_heartbeat = watch.last_heartbeat
             watch.touch(event)
 
-            if now - watch.last_heartbeat >= self._heartbeat_interval:
+            if now - old_heartbeat >= self._heartbeat_interval:
                 self._emit_heartbeat(event, watch)
         else:
             # New watch session.
@@ -544,22 +545,24 @@ class DetectionService:
 
 
 # Known media player app names (lowercase) for confidence boosting.
-_KNOWN_MEDIA_APPS: frozenset[str] = frozenset({
-    "vlc",
-    "vlc media player",
-    "mpv",
-    "mpc-hc",
-    "mpc-be",
-    "plex",
-    "plex htpc",
-    "kodi",
-    "jellyfin",
-    "emby",
-    "infuse",
-    "iina",
-    "celluloid",
-    "totem",
-    "smplayer",
-    "potplayer",
-    "kmplayer",
-})
+_KNOWN_MEDIA_APPS: frozenset[str] = frozenset(
+    {
+        "vlc",
+        "vlc media player",
+        "mpv",
+        "mpc-hc",
+        "mpc-be",
+        "plex",
+        "plex htpc",
+        "kodi",
+        "jellyfin",
+        "emby",
+        "infuse",
+        "iina",
+        "celluloid",
+        "totem",
+        "smplayer",
+        "potplayer",
+        "kmplayer",
+    }
+)

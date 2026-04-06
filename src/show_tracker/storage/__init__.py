@@ -31,25 +31,20 @@ from show_tracker.storage.models import (
 from show_tracker.storage.repository import CacheRepository, WatchRepository
 
 __all__ = [
-    # Manager
-    "DatabaseManager",
-    # Repositories
-    "WatchRepository",
-    "CacheRepository",
-    # ORM bases
-    "WatchBase",
     "CacheBase",
-    # Watch history models
-    "Show",
+    "CacheRepository",
+    "DatabaseManager",
     "Episode",
-    "WatchEvent",
-    "YouTubeWatch",
+    "FailedLookup",
+    "Show",
     "ShowAlias",
+    "TMDbEpisodeCache",
+    "TMDbSearchCache",
+    "TMDbShowCache",
     "UnresolvedEvent",
     "UserSetting",
-    # Cache models
-    "TMDbShowCache",
-    "TMDbSearchCache",
-    "TMDbEpisodeCache",
-    "FailedLookup",
+    "WatchBase",
+    "WatchEvent",
+    "WatchRepository",
+    "YouTubeWatch",
 ]

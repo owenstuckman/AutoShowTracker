@@ -22,6 +22,7 @@ from show_tracker.identification.parser import (
 # preprocess_for_guessit
 # ---------------------------------------------------------------------------
 
+
 class TestPreprocessForGuessit:
     """Tests for the preprocessing step that cleans raw strings."""
 
@@ -93,6 +94,7 @@ class TestPreprocessForGuessit:
 # parse_media_string — pirate filenames
 # ---------------------------------------------------------------------------
 
+
 class TestParseFilenames:
     """Pirate filenames and VLC window titles."""
 
@@ -134,6 +136,7 @@ class TestParseFilenames:
 # parse_media_string — browser titles
 # ---------------------------------------------------------------------------
 
+
 class TestParseBrowserTitles:
     """Browser tab titles from streaming sites."""
 
@@ -166,6 +169,7 @@ class TestParseBrowserTitles:
 # ---------------------------------------------------------------------------
 # parse_media_string — SMTC / MPRIS metadata
 # ---------------------------------------------------------------------------
+
 
 class TestParseSMTC:
     """SMTC and MPRIS metadata strings."""
@@ -201,6 +205,7 @@ class TestParseSMTC:
 # parse_media_string — YouTube titles
 # ---------------------------------------------------------------------------
 
+
 class TestParseYouTube:
     """YouTube video titles."""
 
@@ -227,6 +232,7 @@ class TestParseYouTube:
 # parse_media_string — Plex clean metadata
 # ---------------------------------------------------------------------------
 
+
 class TestParsePlex:
     """Plex clean metadata strings."""
 
@@ -243,6 +249,7 @@ class TestParsePlex:
 # ---------------------------------------------------------------------------
 # parse_media_string — edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestParseEdgeCases:
     """Edge cases and fallback behaviour."""
@@ -287,6 +294,7 @@ class TestParseEdgeCases:
 # ---------------------------------------------------------------------------
 # parse_media_string — date-based episode parsing
 # ---------------------------------------------------------------------------
+
 
 class TestParseDateBasedEpisodes:
     """Date-based episode formats like show.2024.03.15."""
@@ -338,6 +346,7 @@ class TestParseDateBasedEpisodes:
 # parse_media_string — absolute episode numbering
 # ---------------------------------------------------------------------------
 
+
 class TestParseAbsoluteNumbering:
     """Absolute episode numbering (no season), common with anime."""
 
@@ -388,15 +397,14 @@ class TestParseAbsoluteNumbering:
 # URL pattern completeness — additional edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestUrlPatternEdgeCases:
     """Additional URL pattern tests for edge cases and completeness."""
 
     def test_crunchyroll_no_language_prefix(self) -> None:
         from show_tracker.identification.url_patterns import match_url
 
-        result = match_url(
-            "https://www.crunchyroll.com/watch/GRDKJZ81Y/episode-slug"
-        )
+        result = match_url("https://www.crunchyroll.com/watch/GRDKJZ81Y/episode-slug")
         assert result is not None
         assert result.platform == "crunchyroll"
 
@@ -427,9 +435,7 @@ class TestUrlPatternEdgeCases:
     def test_generic_structured_with_hyphenated_season(self) -> None:
         from show_tracker.identification.url_patterns import match_url
 
-        result = match_url(
-            "https://site.com/show/the-office/season-4/episode-12"
-        )
+        result = match_url("https://site.com/show/the-office/season-4/episode-12")
         assert result is not None
         assert result.slug == "the-office"
         assert result.season == 4
@@ -445,9 +451,7 @@ class TestUrlPatternEdgeCases:
     def test_hbo_max_episode_url(self) -> None:
         from show_tracker.identification.url_patterns import match_url
 
-        result = match_url(
-            "https://play.max.com/episode/urn:hbo:episode:abc456"
-        )
+        result = match_url("https://play.max.com/episode/urn:hbo:episode:abc456")
         assert result is not None
         assert result.platform == "hbo_max"
 
@@ -455,6 +459,7 @@ class TestUrlPatternEdgeCases:
 # ---------------------------------------------------------------------------
 # Platform suffix stripping — comprehensive coverage
 # ---------------------------------------------------------------------------
+
 
 class TestPlatformSuffixStripping:
     """Thorough tests for all platform suffixes in _PLATFORM_SUFFIXES."""
@@ -494,6 +499,7 @@ class TestPlatformSuffixStripping:
 # ---------------------------------------------------------------------------
 # Noise word removal — comprehensive coverage
 # ---------------------------------------------------------------------------
+
 
 class TestNoiseWordRemoval:
     """Tests for noise word removal across different contexts."""
@@ -538,6 +544,7 @@ class TestNoiseWordRemoval:
 # Whitespace normalization — comprehensive coverage
 # ---------------------------------------------------------------------------
 
+
 class TestWhitespaceNormalization:
     """Tests for whitespace normalization in preprocessing."""
 
@@ -580,13 +587,12 @@ class TestWhitespaceNormalization:
 # Player suffix stripping — VLC/mpv
 # ---------------------------------------------------------------------------
 
+
 class TestPlayerSuffixStripping:
     """Tests for VLC and mpv suffix stripping from window titles."""
 
     def test_vlc_suffix_smtc(self) -> None:
-        result = preprocess_for_guessit(
-            "Breaking.Bad.S01E01.mkv - VLC media player", "smtc"
-        )
+        result = preprocess_for_guessit("Breaking.Bad.S01E01.mkv - VLC media player", "smtc")
         assert "VLC" not in result
         assert "breaking" in result.lower()
 
@@ -597,16 +603,12 @@ class TestPlayerSuffixStripping:
         assert "VLC" not in result
 
     def test_mpv_suffix_window_title(self) -> None:
-        result = preprocess_for_guessit(
-            "Breaking Bad S01E01 - mpv", "window_title"
-        )
+        result = preprocess_for_guessit("Breaking Bad S01E01 - mpv", "window_title")
         assert "mpv" not in result.split()
 
     def test_vlc_not_stripped_from_browser_title(self) -> None:
         """VLC suffix stripping only applies to smtc/window_title."""
-        result = preprocess_for_guessit(
-            "VLC media player tips - YouTube", "browser_title"
-        )
+        result = preprocess_for_guessit("VLC media player tips - YouTube", "browser_title")
         # YouTube suffix removed but VLC stays (it's part of title)
         assert "vlc" in result.lower()
 

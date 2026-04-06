@@ -7,7 +7,10 @@ match method used.
 
 from __future__ import annotations
 
-from show_tracker.identification.parser import ParseResult
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from show_tracker.identification.parser import ParseResult
 
 # Base confidence by source reliability (higher = more trustworthy)
 _SOURCE_BASE: dict[str, float] = {

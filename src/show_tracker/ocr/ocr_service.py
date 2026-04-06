@@ -11,13 +11,13 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PIL import Image
-
 from show_tracker.ocr.engine import OCRResult, get_ocr_engine
 from show_tracker.ocr.region_crop import crop_regions, find_profile, load_profiles
 from show_tracker.ocr.screenshot import capture_window
 
 if TYPE_CHECKING:
+    from PIL import Image
+
     from show_tracker.ocr.engine import OCREngine
     from show_tracker.ocr.region_crop import AppProfile
 
@@ -29,20 +29,37 @@ _DEFAULT_PROFILES_PATH = (
 
 # Patterns that look like media file names or episode strings
 _MEDIA_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"S\d{1,2}\s*E\d{1,2}", re.IGNORECASE),        # S01E02
-    re.compile(r"\b\d{1,2}x\d{1,2}\b"),                         # 1x02
-    re.compile(r"(?:season|series)\s*\d+", re.IGNORECASE),       # Season 3
-    re.compile(r"(?:episode|ep\.?)\s*\d+", re.IGNORECASE),       # Episode 5
-    re.compile(r"\.\w{2,4}$"),                                    # .mkv, .mp4
-    re.compile(r"\b(?:720|1080|2160)[pi]?\b", re.IGNORECASE),    # Resolution hints
+    re.compile(r"S\d{1,2}\s*E\d{1,2}", re.IGNORECASE),  # S01E02
+    re.compile(r"\b\d{1,2}x\d{1,2}\b"),  # 1x02
+    re.compile(r"(?:season|series)\s*\d+", re.IGNORECASE),  # Season 3
+    re.compile(r"(?:episode|ep\.?)\s*\d+", re.IGNORECASE),  # Episode 5
+    re.compile(r"\.\w{2,4}$"),  # .mkv, .mp4
+    re.compile(r"\b(?:720|1080|2160)[pi]?\b", re.IGNORECASE),  # Resolution hints
     re.compile(r"\b(?:HDTV|WEB-?DL|BluRay|BRRip)\b", re.IGNORECASE),
 ]
 
 # Strings commonly found in player chrome (not media titles)
 _NOISE_STRINGS = {
-    "file", "edit", "view", "playback", "audio", "video", "subtitle",
-    "tools", "help", "menu", "open", "close", "pause", "play", "stop",
-    "volume", "mute", "fullscreen", "preferences", "settings",
+    "file",
+    "edit",
+    "view",
+    "playback",
+    "audio",
+    "video",
+    "subtitle",
+    "tools",
+    "help",
+    "menu",
+    "open",
+    "close",
+    "pause",
+    "play",
+    "stop",
+    "volume",
+    "mute",
+    "fullscreen",
+    "preferences",
+    "settings",
 }
 
 
@@ -119,9 +136,7 @@ class OCRService:
         logger.debug("No profile for '%s', using full-window fallback", app_name)
         return self._process_full_window(screenshot)
 
-    def _process_with_profile(
-        self, screenshot: Image.Image, profile: AppProfile
-    ) -> str | None:
+    def _process_with_profile(self, screenshot: Image.Image, profile: AppProfile) -> str | None:
         """Run OCR on profiled regions and return the best candidate."""
         regions = crop_regions(screenshot, profile)
         if not regions:
@@ -135,7 +150,8 @@ class OCRService:
                 all_results.append((region_name, results))
                 logger.debug(
                     "Region '%s': %d text segments",
-                    region_name, len(results),
+                    region_name,
+                    len(results),
                 )
 
         if not all_results:
@@ -154,7 +170,11 @@ class OCRService:
 
             logger.debug(
                 "Region '%s': text='%s', conf=%.2f, media_score=%.2f, total=%.2f",
-                region_name, combined[:80], avg_conf, media_score, total_score,
+                region_name,
+                combined[:80],
+                avg_conf,
+                media_score,
+                total_score,
             )
 
             if total_score > best_score:
@@ -241,6 +261,7 @@ class OCRService:
 # Scoring and cleaning helpers
 # ---------------------------------------------------------------------------
 
+
 def _score_media_text(text: str) -> float:
     """Score how likely a text string is to be a media title.
 
@@ -287,7 +308,7 @@ def _clean_title(text: str) -> str:
     # Remove common player prefixes
     for prefix in ("VLC media player -", "mpv -", "MPC-HC -", "Plex -"):
         if text.lower().startswith(prefix.lower()):
-            text = text[len(prefix):].strip()
+            text = text[len(prefix) :].strip()
 
     # Remove trailing " - VLC media player" etc.
     for suffix in ("- VLC media player", "- mpv", "- MPC-HC", "- Plex"):

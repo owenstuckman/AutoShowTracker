@@ -14,6 +14,7 @@ import pytest
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_aw_events():
     """Sample ActivityWatch window-watcher events."""
@@ -81,6 +82,7 @@ def mock_aw_browser_events():
 # Tests
 # ---------------------------------------------------------------------------
 
+
 class TestActivityWatchEventParsing:
     """Test that AW events are correctly parsed into detection signals."""
 
@@ -114,10 +116,14 @@ class TestParsingIntegration:
         vlc_title = mock_aw_events[0]["data"]["title"]
         result = parse_media_string(vlc_title, "activitywatch")
 
-        assert result.title.lower().replace(" ", "").replace(".", "") in [
-            "breakingbad",
-            "breaking bad",
-        ] or "breaking" in result.title.lower()
+        assert (
+            result.title.lower().replace(" ", "").replace(".", "")
+            in [
+                "breakingbad",
+                "breaking bad",
+            ]
+            or "breaking" in result.title.lower()
+        )
         assert result.season == 1
         assert result.episode == 1
 

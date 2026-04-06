@@ -9,9 +9,11 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from collections.abc import Coroutine
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
 
 import click
 
@@ -21,6 +23,7 @@ from show_tracker.config import load_settings
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _run_async(coro: Coroutine[Any, Any, Any]) -> Any:
     """Run an async coroutine from synchronous Click handlers."""
@@ -37,6 +40,7 @@ def _echo_json(data: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 # CLI group
 # ---------------------------------------------------------------------------
+
 
 @click.group()
 @click.version_option(version=__version__, prog_name="show-tracker")
@@ -60,9 +64,12 @@ def cli(ctx: click.Context, data_dir: Path | None) -> None:
 # run -- main launcher
 # ---------------------------------------------------------------------------
 
+
 @cli.command()
 @click.option("--host", default="127.0.0.1", help="Bind address for the HTTP API.")
-@click.option("--port", type=int, default=None, help="Port for the HTTP API (default: from config).")
+@click.option(
+    "--port", type=int, default=None, help="Port for the HTTP API (default: from config)."
+)
 @click.pass_context
 def run(ctx: click.Context, host: str, port: int | None) -> None:
     """Start all Show Tracker services.
@@ -148,6 +155,7 @@ def run(ctx: click.Context, host: str, port: int | None) -> None:
 # identify -- Phase 0 standalone identification
 # ---------------------------------------------------------------------------
 
+
 @cli.command()
 @click.argument("raw_string")
 @click.option("--source", default="manual", help="Source type hint (e.g. browser_title, filename).")
@@ -186,6 +194,7 @@ def identify(ctx: click.Context, raw_string: str, source: str) -> None:
 # test-pipeline -- batch-test the identification pipeline
 # ---------------------------------------------------------------------------
 
+
 @cli.command("test-pipeline")
 @click.option(
     "--dataset",
@@ -218,7 +227,12 @@ def test_pipeline(ctx: click.Context, dataset: Path | None, verbose: bool) -> No
         raise SystemExit(1)
 
     if dataset is None:
-        default_path = Path(__file__).resolve().parent.parent.parent / "tests" / "data" / "identification_dataset.json"
+        default_path = (
+            Path(__file__).resolve().parent.parent.parent
+            / "tests"
+            / "data"
+            / "identification_dataset.json"
+        )
         if not default_path.exists():
             click.secho(
                 f"No dataset found at {default_path}. Provide one with --dataset.",
@@ -291,15 +305,15 @@ def _check_match(result: dict[str, Any] | None, expected: dict[str, Any]) -> boo
     # to handle minor formatting differences.
     expected_show = expected.get("show", "").lower()
     result_show = result.get("show_name", "").lower()
-    if expected_show and expected_show not in result_show and result_show not in expected_show:
-        return False
-
-    return True
+    return not (
+        expected_show and expected_show not in result_show and result_show not in expected_show
+    )
 
 
 # ---------------------------------------------------------------------------
 # init-db -- database initialisation
 # ---------------------------------------------------------------------------
+
 
 @cli.command("init-db")
 @click.option("--force", is_flag=True, help="Drop and recreate tables if they already exist.")
@@ -330,6 +344,7 @@ def init_db(ctx: click.Context, force: bool) -> None:
 # ---------------------------------------------------------------------------
 # setup -- first-run wizard (can be run manually)
 # ---------------------------------------------------------------------------
+
 
 @cli.command()
 @click.pass_context

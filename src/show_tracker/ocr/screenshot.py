@@ -6,6 +6,7 @@ foreground, which is important so the tracker never disrupts the user.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import subprocess
 import sys
@@ -52,6 +53,7 @@ def capture_window(hwnd_or_window_id: int, platform: str | None = None) -> Image
 # Windows: PrintWindow via ctypes Win32 API
 # ---------------------------------------------------------------------------
 
+
 def _capture_windows(hwnd: int) -> Image.Image:
     """Background-safe capture on Windows using PrintWindow.
 
@@ -95,9 +97,9 @@ def _capture_windows(hwnd: int) -> Image.Image:
             try:
                 old_bitmap = gdi32.SelectObject(mem_dc, bitmap)
 
-                # PW_RENDERFULLCONTENT = 0x00000002 (captures even DWM-composed content)
-                PW_RENDERFULLCONTENT = 0x00000002
-                result = user32.PrintWindow(hwnd, mem_dc, PW_RENDERFULLCONTENT)
+                # pw_renderfullcontent = 0x00000002 (captures even DWM-composed content)
+                pw_renderfullcontent = 0x00000002
+                result = user32.PrintWindow(hwnd, mem_dc, pw_renderfullcontent)
                 if not result:
                     # Fall back to basic PrintWindow (flag 0)
                     logger.debug("PrintWindow with PW_RENDERFULLCONTENT failed, retrying flag=0")
@@ -133,12 +135,19 @@ def _capture_windows(hwnd: int) -> Image.Image:
                 pixel_buffer = ctypes.create_string_buffer(buffer_size)
 
                 gdi32.GetDIBits(
-                    mem_dc, bitmap, 0, height,
-                    pixel_buffer, ctypes.byref(bmi), 0,  # DIB_RGB_COLORS
+                    mem_dc,
+                    bitmap,
+                    0,
+                    height,
+                    pixel_buffer,
+                    ctypes.byref(bmi),
+                    0,  # DIB_RGB_COLORS
                 )
 
                 # BGRA -> RGBA
-                img = Image.frombuffer("RGBA", (width, height), bytes(pixel_buffer), "raw", "BGRA", 0, 1)
+                img = Image.frombuffer(
+                    "RGBA", (width, height), bytes(pixel_buffer), "raw", "BGRA", 0, 1
+                )
                 return img.convert("RGB")
 
             finally:
@@ -153,6 +162,7 @@ def _capture_windows(hwnd: int) -> Image.Image:
 # ---------------------------------------------------------------------------
 # Linux: xdotool + xwd or import (ImageMagick) for X11
 # ---------------------------------------------------------------------------
+
 
 def _capture_linux(window_id: int) -> Image.Image:
     """Capture a window on Linux/X11 using xdotool + import.
@@ -175,13 +185,13 @@ def _capture_linux(window_id: int) -> Image.Image:
     except FileNotFoundError:
         raise RuntimeError(
             "xdotool is not installed. Install it with: sudo apt install xdotool"
-        )
+        ) from None
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(
             f"Window {hex_id} does not exist or is not accessible: {exc.stderr.decode()}"
         ) from exc
     except subprocess.TimeoutExpired:
-        raise RuntimeError("xdotool timed out verifying window geometry")
+        raise RuntimeError("xdotool timed out verifying window geometry") from None
 
     # Use ImageMagick's 'import' command to capture the window
     # -silent suppresses the crosshair cursor, -window targets a specific window
@@ -194,15 +204,12 @@ def _capture_linux(window_id: int) -> Image.Image:
         )
     except FileNotFoundError:
         raise RuntimeError(
-            "ImageMagick 'import' is not installed. "
-            "Install it with: sudo apt install imagemagick"
-        )
+            "ImageMagick 'import' is not installed. Install it with: sudo apt install imagemagick"
+        ) from None
     except subprocess.CalledProcessError as exc:
-        raise RuntimeError(
-            f"Failed to capture window {hex_id}: {exc.stderr.decode()}"
-        ) from exc
+        raise RuntimeError(f"Failed to capture window {hex_id}: {exc.stderr.decode()}") from exc
     except subprocess.TimeoutExpired:
-        raise RuntimeError("Window capture timed out")
+        raise RuntimeError("Window capture timed out") from None
 
     img = Image.open(io.BytesIO(proc.stdout))
     return img.convert("RGB")
@@ -211,6 +218,7 @@ def _capture_linux(window_id: int) -> Image.Image:
 # ---------------------------------------------------------------------------
 # macOS: screencapture CLI or Quartz CGWindowListCreateImage
 # ---------------------------------------------------------------------------
+
 
 def _capture_macos(window_id: int) -> Image.Image:
     """Capture a window on macOS.
@@ -252,7 +260,7 @@ def _capture_macos(window_id: int) -> Image.Image:
         tmp_path = tmp.name
 
     try:
-        proc = subprocess.run(
+        subprocess.run(
             ["screencapture", "-l", str(window_id), "-o", "-x", tmp_path],
             capture_output=True,
             check=True,
@@ -261,16 +269,15 @@ def _capture_macos(window_id: int) -> Image.Image:
         img = Image.open(tmp_path)
         return img.convert("RGB")
     except FileNotFoundError:
-        raise RuntimeError("screencapture command not found (expected on macOS)")
+        raise RuntimeError("screencapture command not found (expected on macOS)") from None
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(
             f"screencapture failed for window {window_id}: {exc.stderr.decode()}"
         ) from exc
     except subprocess.TimeoutExpired:
-        raise RuntimeError("screencapture timed out")
+        raise RuntimeError("screencapture timed out") from None
     finally:
         import os
-        try:
+
+        with contextlib.suppress(OSError):
             os.unlink(tmp_path)
-        except OSError:
-            pass

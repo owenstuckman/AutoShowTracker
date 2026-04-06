@@ -15,10 +15,22 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # Video file extensions to look for (lowercase, with leading dot)
-_VIDEO_EXTENSIONS: frozenset[str] = frozenset({
-    ".mkv", ".mp4", ".avi", ".m4v", ".wmv", ".flv",
-    ".webm", ".ts", ".mov", ".mpg", ".mpeg", ".ogv",
-})
+_VIDEO_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".mkv",
+        ".mp4",
+        ".avi",
+        ".m4v",
+        ".wmv",
+        ".flv",
+        ".webm",
+        ".ts",
+        ".mov",
+        ".mpg",
+        ".mpeg",
+        ".ogv",
+    }
+)
 
 
 def get_open_media_files(pid: int) -> list[str]:
