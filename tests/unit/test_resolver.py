@@ -308,9 +308,7 @@ class TestResolverResolutionPath:
             tmdb_client=client,
             alias_store=alias_store,
         )
-        result = resolver.resolve(
-            "got s01e01", source_type="browser_title"
-        )
+        result = resolver.resolve("got s01e01", source_type="browser_title")
         assert result.match_method == "alias_lookup"
         assert result.tmdb_show_id == 12345
 

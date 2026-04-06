@@ -102,6 +102,7 @@ def test_db(tmp_path: Path) -> DatabaseManager:
 def reset_media_state() -> None:
     """Reset the module-level _current_state in routes_media between tests."""
     import show_tracker.api.routes_media as routes_media
+
     routes_media._current_state = {}
     yield
     routes_media._current_state = {}
@@ -351,7 +352,9 @@ class TestHistoryEndpoints:
         assert data["show_id"] == show_id
         assert "seasons" in data
 
-    def test_show_detail_contains_seasons(self, client: TestClient, test_db: DatabaseManager) -> None:
+    def test_show_detail_contains_seasons(
+        self, client: TestClient, test_db: DatabaseManager
+    ) -> None:
         show_id, _ = _seed_watch_history(test_db)
         resp = client.get(f"/api/history/shows/{show_id}")
         data = resp.json()
@@ -360,9 +363,7 @@ class TestHistoryEndpoints:
         assert season["season_number"] == 1
         assert len(season["episodes"]) == 1
 
-    def test_show_progress_returns_list(
-        self, client: TestClient, test_db: DatabaseManager
-    ) -> None:
+    def test_show_progress_returns_list(self, client: TestClient, test_db: DatabaseManager) -> None:
         show_id, _ = _seed_watch_history(test_db)
         resp = client.get(f"/api/history/shows/{show_id}/progress")
         assert resp.status_code == 200
@@ -384,9 +385,7 @@ class TestHistoryEndpoints:
         assert resp.status_code == 200
         assert resp.json() == []
 
-    def test_next_to_watch_with_history(
-        self, client: TestClient, test_db: DatabaseManager
-    ) -> None:
+    def test_next_to_watch_with_history(self, client: TestClient, test_db: DatabaseManager) -> None:
         # ep1 completed, ep2 not watched
         with test_db.get_watch_session() as session:
             repo = WatchRepository(session)
@@ -534,9 +533,7 @@ class TestAliasEndpoints:
         resp = client.post("/api/aliases", json={"show_id": show_id, "alias": "BB"})
         assert resp.status_code == 409
 
-    def test_get_aliases_after_creation(
-        self, client: TestClient, test_db: DatabaseManager
-    ) -> None:
+    def test_get_aliases_after_creation(self, client: TestClient, test_db: DatabaseManager) -> None:
         show_id, _ = _seed_watch_history(test_db)
         client.post("/api/aliases", json={"show_id": show_id, "alias": "BrBa"})
         resp = client.get(f"/api/aliases/{show_id}")
@@ -586,9 +583,7 @@ class TestUnresolvedEndpoints:
         assert len(data) == 1
         assert data[0]["raw_input"] == "mystery.s01e01.mkv"
 
-    def test_list_unresolved_schema(
-        self, client: TestClient, test_db: DatabaseManager
-    ) -> None:
+    def test_list_unresolved_schema(self, client: TestClient, test_db: DatabaseManager) -> None:
         with test_db.get_watch_session() as session:
             evt = UnresolvedEvent(
                 raw_input="show.s02e05.mkv",

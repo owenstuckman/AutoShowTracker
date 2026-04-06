@@ -135,6 +135,7 @@ class TestDualDatabaseIsolation:
 
         with db.get_watch_session() as session:
             from sqlalchemy import select
+
             show = session.execute(select(Show).where(Show.tmdb_id == 42)).scalar_one_or_none()
         assert show is None
 
@@ -156,6 +157,7 @@ class TestDualDatabaseIsolation:
         # Watch data survives — access attributes inside session to avoid DetachedInstanceError
         with db.get_watch_session() as session:
             from sqlalchemy import select
+
             show = session.execute(select(Show).where(Show.tmdb_id == 111)).scalar_one_or_none()
             assert show is not None
             assert show.title == "Persistent Show"

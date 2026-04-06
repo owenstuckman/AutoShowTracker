@@ -65,17 +65,13 @@ class TestTraktSync:
     def test_auth_is_post(self) -> None:
         """The auth endpoint uses POST."""
         methods_by_path = self._route_methods()
-        auth_methods = [
-            methods for path, methods in methods_by_path.items() if "auth" in path
-        ]
+        auth_methods = [methods for path, methods in methods_by_path.items() if "auth" in path]
         assert any("POST" in m for m in auth_methods)
 
     def test_status_is_get(self) -> None:
         """The status endpoint uses GET."""
         methods_by_path = self._route_methods()
-        status_methods = [
-            methods for path, methods in methods_by_path.items() if "status" in path
-        ]
+        status_methods = [methods for path, methods in methods_by_path.items() if "status" in path]
         assert any("GET" in m for m in status_methods)
 
     def test_disconnect_is_delete(self) -> None:

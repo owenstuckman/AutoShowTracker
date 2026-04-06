@@ -24,6 +24,7 @@ from show_tracker.identification.parser import ParseResult
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_parse_result(
     title: str = "Breaking Bad",
     season: int | None = 1,
@@ -107,8 +108,16 @@ class TestSourceBaseConfidence:
     def test_source_base_table_completeness(self) -> None:
         """All expected keys are present in the private table."""
         expected_keys = {
-            "plex", "smtc", "mpris", "browser_title", "browser_url",
-            "filename", "youtube", "window_title", "ocr", "unknown",
+            "plex",
+            "smtc",
+            "mpris",
+            "browser_title",
+            "browser_url",
+            "filename",
+            "youtube",
+            "window_title",
+            "ocr",
+            "unknown",
         }
         assert expected_keys.issubset(set(_SOURCE_BASE.keys()))
 
@@ -172,7 +181,12 @@ class TestBonusScoring:
         """
         pr = _make_parse_result()
         base = _SOURCE_BASE["ocr"]
-        expected = (base + 0.95) / 2.0 + _BONUS_EXACT_SEASON_EPISODE + _BONUS_HIGH_FUZZY + _PENALTY_OCR_SOURCE
+        expected = (
+            (base + 0.95) / 2.0
+            + _BONUS_EXACT_SEASON_EPISODE
+            + _BONUS_HIGH_FUZZY
+            + _PENALTY_OCR_SOURCE
+        )
         assert calculate_confidence(pr, 0.95, "ocr", "guessit+tmdb_fuzzy") == pytest.approx(
             expected
         )
@@ -224,14 +238,8 @@ class TestPenaltyScoring:
         """OCR source triggers _PENALTY_OCR_SOURCE."""
         pr = _make_parse_result()
         base = _SOURCE_BASE["ocr"]
-        expected = (
-            (base + 0.8) / 2.0
-            + _BONUS_EXACT_SEASON_EPISODE
-            + _PENALTY_OCR_SOURCE
-        )
-        assert calculate_confidence(pr, 0.8, "ocr", "guessit+tmdb_fuzzy") == pytest.approx(
-            expected
-        )
+        expected = (base + 0.8) / 2.0 + _BONUS_EXACT_SEASON_EPISODE + _PENALTY_OCR_SOURCE
+        assert calculate_confidence(pr, 0.8, "ocr", "guessit+tmdb_fuzzy") == pytest.approx(expected)
 
     def test_short_title_penalty(self) -> None:
         """Title with 5 or fewer characters triggers _PENALTY_ABBREVIATED_TITLE."""
@@ -245,11 +253,7 @@ class TestPenaltyScoring:
         """Boundary: title of exactly 5 characters should trigger the penalty."""
         pr = _make_parse_result(title="ABCde")
         base = _SOURCE_BASE["smtc"]
-        expected = (
-            (base + 0.8) / 2.0
-            + _BONUS_EXACT_SEASON_EPISODE
-            + _PENALTY_ABBREVIATED_TITLE
-        )
+        expected = (base + 0.8) / 2.0 + _BONUS_EXACT_SEASON_EPISODE + _PENALTY_ABBREVIATED_TITLE
         assert calculate_confidence(pr, 0.8, "smtc", "guessit+tmdb_fuzzy") == pytest.approx(
             expected
         )
@@ -339,10 +343,6 @@ class TestConfidenceWithUrlMatch:
         """Even with tmdb_score=0.0 an exact_url match still adds the bonus."""
         pr = _make_parse_result()
         base = _SOURCE_BASE["browser_url"]
-        expected = (
-            (base + 0.0) / 2.0
-            + _BONUS_URL_PLATFORM_MATCH
-            + _BONUS_EXACT_SEASON_EPISODE
-        )
+        expected = (base + 0.0) / 2.0 + _BONUS_URL_PLATFORM_MATCH + _BONUS_EXACT_SEASON_EPISODE
         result = calculate_confidence(pr, 0.0, "browser_url", "exact_url")
         assert result == pytest.approx(max(0.0, min(1.0, expected)))
