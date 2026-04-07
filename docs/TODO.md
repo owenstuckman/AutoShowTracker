@@ -2,14 +2,6 @@
 
 For completed features, see [FEATURES.md](FEATURES.md).
 
----
-
-## CI Failures — Must Fix to Pass CI
-
-All CI failures resolved.
-
----
-
 ## Missing Functionality
 
 ### Movie API Routes — DONE
