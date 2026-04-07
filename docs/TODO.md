@@ -6,28 +6,7 @@ For completed features, see [FEATURES.md](FEATURES.md).
 
 ## CI Failures — Must Fix to Pass CI
 
-CI runs four checks: `ruff check`, `ruff format`, `mypy`, and `pytest`. All four currently pass.
-
-### 1. Ruff Lint — DONE
-
-- [x] Ran `ruff check --fix src/ tests/` (auto-fixed import sorting, UP017/UP035, etc.)
-- [x] Manually fixed remaining errors: TC001/TC002/TC003 (TYPE_CHECKING blocks), SIM105 (contextlib.suppress), B904 (raise from), N815/N806 (naming), F401 (unused imports), RUF001/RUF006/RUF012/RUF022/SIM103/SIM109/E731
-- [x] Verified: `ruff check src/ tests/` exits clean
-
-### 2. Ruff Format — DONE
-
-- [x] Ran `ruff format src/ tests/`
-- [x] Verified: `ruff format --check src/ tests/` exits clean
-
-### 3. Mypy — DONE (0 errors)
-
-- [x] All 85 mypy errors resolved (see FEATURES.md for full list)
-- [x] Removed `continue-on-error: true` from mypy step in CI
-
-### 4. Pytest — DONE (602 passed, 0 failures)
-
-- [x] `python-multipart` already in core dependencies in `pyproject.toml`
-- [x] Fixed heartbeat interval check (capture `old_heartbeat` before `touch()`)
+All CI failures resolved.
 
 ---
 
