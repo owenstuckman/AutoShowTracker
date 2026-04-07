@@ -114,6 +114,9 @@ class ActiveWatch:
 # Type alias for the callback that receives fully processed detection events.
 DetectionResultCallback = Callable[[DetectionEvent, ConfidenceTier], None]
 
+# Type alias for the callback invoked when a watch session is finalised.
+DetectionFinalizeCallback = Callable[[ActiveWatch], None]
+
 
 # ---------------------------------------------------------------------------
 # Detection service
@@ -183,6 +186,7 @@ class DetectionService:
         self._active_watches: dict[str, ActiveWatch] = {}
         self._event_queue: asyncio.Queue[DetectionEvent] = asyncio.Queue()
         self._result_callbacks: list[DetectionResultCallback] = []
+        self._finalize_callbacks: list[DetectionFinalizeCallback] = []
         self._tasks: list[asyncio.Task[None]] = []
         self._running: bool = False
 
@@ -191,6 +195,10 @@ class DetectionService:
     def register_result_callback(self, callback: DetectionResultCallback) -> None:
         """Register a callback invoked for every processed detection result."""
         self._result_callbacks.append(callback)
+
+    def register_finalize_callback(self, callback: DetectionFinalizeCallback) -> None:
+        """Register a callback invoked when a watch session is finalised (stopped)."""
+        self._finalize_callbacks.append(callback)
 
     async def start(self) -> None:
         """Start all detection loops and listeners."""
@@ -401,6 +409,11 @@ class DetectionService:
             watch.heartbeat_count,
             time.monotonic() - watch.first_seen,
         )
+        for callback in self._finalize_callbacks:
+            try:
+                callback(watch)
+            except Exception:
+                logger.exception("Error in finalize callback")
 
     # -- Confidence routing --------------------------------------------------
 

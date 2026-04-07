@@ -731,6 +731,12 @@ const SETTING_DEFINITIONS = [
         hint: "Get notified when tracked shows have new episodes (true/false)",
         default: "true",
     },
+    {
+        key: "trakt_scrobble_enabled",
+        label: "Trakt Auto-Scrobble",
+        hint: "Automatically send completed watch sessions to Trakt.tv (true/false). Requires Trakt credentials.",
+        default: "false",
+    },
 ];
 
 async function renderSettings() {

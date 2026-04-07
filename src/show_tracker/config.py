@@ -71,6 +71,13 @@ class Settings(BaseSettings):
         default=True,
         description="Enable OCR fallback when SMTC/MPRIS and window title fail.",
     )
+    trakt_scrobble_enabled: bool = Field(
+        default=False,
+        description=(
+            "Automatically scrobble completed watch sessions to Trakt.tv. "
+            "Requires Trakt credentials and an active connection."
+        ),
+    )
 
     # ── External API Keys ───────────────────────────────────────────────
     tmdb_api_key: str = Field(

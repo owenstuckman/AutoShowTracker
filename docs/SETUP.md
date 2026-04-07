@@ -401,6 +401,36 @@ alembic stamp head
   logs/               # Application log files
 ```
 
+### Backup and Restore
+
+`watch_history.db` is the only file that cannot be rebuilt. Back it up regularly.
+
+**Manual backup:**
+```bash
+cp ~/.show-tracker/watch_history.db ~/watch_history.db.bak
+```
+
+**Automated backup with cron (Linux/macOS):**
+```bash
+# Add to crontab -e: back up daily at 2am
+0 2 * * * cp ~/.show-tracker/watch_history.db ~/.show-tracker/watch_history.db.$(date +%Y%m%d)
+```
+
+**Cloud-friendly backup:** Set `ST_DATA_DIR` to a folder that is already synced by Dropbox, OneDrive, iCloud, or Syncthing:
+```bash
+# In .env or shell profile
+ST_DATA_DIR=~/Dropbox/show-tracker
+```
+AutoShowTracker reads `ST_DATA_DIR` on every startup, so all databases and logs will be written there automatically.
+
+**Restore from backup:**
+```bash
+# Stop show-tracker first, then copy the backup back
+cp ~/watch_history.db.bak ~/.show-tracker/watch_history.db
+```
+
+`media_cache.db` is safe to delete at any time — it will be rebuilt from TMDb on next startup.
+
 ### Settings API
 
 At runtime, user settings are stored in the `user_settings` table and accessible via the HTTP API:

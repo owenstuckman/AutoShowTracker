@@ -4,6 +4,7 @@
   "auto_log_threshold": 0.9,
   "review_threshold": 0.7,
   "ocr_enabled": true,
+  "trakt_scrobble_enabled": false,
   "heartbeat_interval": 30,
   "grace_period": 120,
   "polling_interval": 10

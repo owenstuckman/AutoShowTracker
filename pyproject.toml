@@ -60,6 +60,10 @@ linux = [
     "dbus-next>=0.2.3",
     "pystray>=0.19",
 ]
+macos = [
+    "pyobjc-framework-MediaPlayer>=9.0",
+    "pystray>=0.19",
+]
 notifications = [
     "plyer>=2.1",
 ]

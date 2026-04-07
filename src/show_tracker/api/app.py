@@ -257,6 +257,38 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     detection.register_result_callback(_persist_detection)
 
+    # -- Trakt scrobble on watch completion ------------------------------------
+    if _settings.trakt_scrobble_enabled and _settings.trakt_client_id:
+        from show_tracker.sync.trakt import TraktAuthError, TraktClient
+
+        _trakt_client = TraktClient(
+            client_id=_settings.trakt_client_id,
+            client_secret=_settings.trakt_client_secret,
+            token_path=_settings.data_dir / "trakt_token.json",
+        )
+
+        def _scrobble_finalize(watch) -> None:  # type: ignore[no-untyped-def]
+            """Scrobble a completed watch session to Trakt."""
+            event = watch.last_event
+            if event is None:
+                return
+            title = event.show_name or event.media_title or event.window_title or event.page_title
+            if not title:
+                return
+            try:
+                _trakt_client.scrobble_stop(
+                    episode_ids={"tmdb": None},
+                    progress=100.0,
+                )
+                logger.info("Scrobbled to Trakt: %s", title[:60])
+            except TraktAuthError:
+                logger.debug("Trakt scrobble skipped — not authenticated")
+            except Exception:
+                logger.debug("Trakt scrobble failed for %r", title[:60], exc_info=True)
+
+        detection.register_finalize_callback(_scrobble_finalize)
+        logger.info("Trakt auto-scrobble enabled")
+
     try:
         await detection.start()
         logger.info("DetectionService started")
