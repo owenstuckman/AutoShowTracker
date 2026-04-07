@@ -1,121 +1,176 @@
-"""macOS MediaRemote listener for media session detection.
+"""macOS media session listener using MPNowPlayingInfoCenter.
 
-Uses pyobjc-framework-MediaPlayer to access MPNowPlayingInfoCenter
-for detecting currently playing media on macOS.
+Polls MPNowPlayingInfoCenter.defaultCenter() on a short interval to detect
+title/playback changes, then emits MediaSessionEvent to registered callbacks.
+This implements the same MediaSessionListener protocol as the Windows SMTC
+and Linux MPRIS listeners.
 
-Requires: pip install pyobjc-framework-MediaPlayer
-
-This module implements the same MediaSessionListener protocol as
-the SMTC (Windows) and MPRIS (Linux) listeners.
+Requires: pip install show-tracker[macos]  (pyobjc-framework-MediaPlayer)
 """
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 import sys
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import Any
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
+from show_tracker.detection.media_session import (
+    MediaSessionCallback,
+    MediaSessionEvent,
+    PlaybackStatus,
+)
 
 logger = logging.getLogger(__name__)
 
+_POLL_INTERVAL = 2.0  # seconds between MPNowPlayingInfoCenter polls
 
-@dataclass
-class MediaSessionInfo:
-    """Information about a currently playing media session."""
+# MPNowPlayingInfo dictionary keys
+_KEY_TITLE = "MPMediaItemPropertyTitle"
+_KEY_ARTIST = "MPMediaItemPropertyArtist"
+_KEY_ALBUM = "MPMediaItemPropertyAlbumTitle"
+_KEY_PLAYBACK_RATE = "MPNowPlayingInfoPropertyPlaybackRate"
 
-    title: str
-    artist: str | None = None
-    album: str | None = None
-    playback_status: str = "unknown"  # "playing" | "paused" | "stopped" | "unknown"
-    position: float | None = None  # seconds
-    duration: float | None = None  # seconds
+# Platform guard ------------------------------------------------------------
+
+if sys.platform != "darwin":
+    _MEDIAPLAYER_AVAILABLE = False
+else:
+    try:
+        import MediaPlayer  # type: ignore[import-not-found,import-untyped]  # noqa: F401
+
+        _MEDIAPLAYER_AVAILABLE = True
+    except ImportError:
+        _MEDIAPLAYER_AVAILABLE = False
+
+
+def _map_playback_rate(rate: Any) -> PlaybackStatus:
+    """Convert an MPNowPlayingInfoPropertyPlaybackRate value to PlaybackStatus."""
+    try:
+        r = float(rate)
+    except (TypeError, ValueError):
+        return PlaybackStatus.UNKNOWN
+    if r > 0:
+        return PlaybackStatus.PLAYING
+    if r == 0:
+        return PlaybackStatus.PAUSED
+    return PlaybackStatus.STOPPED
 
 
 class MacOSMediaListener:
-    """Listens for media session changes on macOS via MediaRemote framework.
+    """Polls MPNowPlayingInfoCenter to detect media playback changes on macOS.
 
-    This is a stub implementation. Full implementation requires running on macOS
-    with pyobjc-framework-MediaPlayer installed.
+    Emits a :class:`~show_tracker.detection.media_session.MediaSessionEvent`
+    whenever the now-playing title or playback status changes.
 
-    Args:
-        on_session_change: Callback invoked when media session state changes.
+    Usage::
+
+        listener = MacOSMediaListener()
+        listener.register_callback(my_handler)
+        await listener.start()
+        # ...
+        await listener.stop()
+
+    Raises
+    ------
+    RuntimeError
+        If instantiated on a non-macOS platform.
+    ImportError
+        If ``pyobjc-framework-MediaPlayer`` is not installed.
     """
 
-    def __init__(
-        self,
-        on_session_change: Callable[[MediaSessionInfo], None] | None = None,
-    ) -> None:
-        self._callback = on_session_change
-        self._running = False
-
-    @staticmethod
-    def is_available() -> bool:
-        """Check if this listener can run on the current platform."""
+    def __init__(self) -> None:
         if sys.platform != "darwin":
-            return False
-
-        try:
-            import MediaPlayer  # type: ignore[import-not-found]  # noqa: F401
-
-            return True
-        except ImportError:
-            return False
-
-    def start(self) -> None:
-        """Start listening for media session changes.
-
-        On non-macOS platforms or without pyobjc, this is a no-op.
-        """
-        if not self.is_available():
-            logger.info(
-                "macOS MediaRemote listener not available "
-                "(requires macOS + pyobjc-framework-MediaPlayer)"
+            raise RuntimeError(
+                f"MacOSMediaListener is only supported on macOS. Current platform: {sys.platform!r}"
             )
+        if not _MEDIAPLAYER_AVAILABLE:
+            raise ImportError(
+                "The 'pyobjc-framework-MediaPlayer' package is required for macOS "
+                "media detection. Install it with: pip install show-tracker[macos]"
+            )
+
+        self._callbacks: list[MediaSessionCallback] = []
+        self._running: bool = False
+        self._poll_task: asyncio.Task[None] | None = None
+        self._last_title: str = ""
+        self._last_status: PlaybackStatus = PlaybackStatus.UNKNOWN
+
+    # -- Public API ---------------------------------------------------------
+
+    def register_callback(self, callback: MediaSessionCallback) -> None:
+        """Register a function to be invoked on each media state change."""
+        self._callbacks.append(callback)
+
+    async def start(self) -> None:
+        """Begin polling MPNowPlayingInfoCenter for media changes."""
+        if self._running:
+            return
+        self._running = True
+        self._poll_task = asyncio.create_task(self._poll_loop())
+        logger.info("macOS media listener started (poll interval: %.1fs)", _POLL_INTERVAL)
+
+    async def stop(self) -> None:
+        """Stop polling and release resources."""
+        self._running = False
+        if self._poll_task is not None:
+            self._poll_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._poll_task
+            self._poll_task = None
+        logger.info("macOS media listener stopped")
+
+    # -- Internals ----------------------------------------------------------
+
+    async def _poll_loop(self) -> None:
+        """Main polling loop — runs until stop() cancels it."""
+        while self._running:
+            try:
+                self._poll_once()
+            except Exception:
+                logger.debug("macOS media poll error", exc_info=True)
+            await asyncio.sleep(_POLL_INTERVAL)
+
+    def _poll_once(self) -> None:
+        """Read MPNowPlayingInfoCenter and emit an event if state changed."""
+        import MediaPlayer as _mp  # type: ignore[import-not-found,import-untyped]  # noqa: N813
+
+        center = _mp.MPNowPlayingInfoCenter.defaultCenter()
+        info: dict[str, Any] | None = center.nowPlayingInfo()
+
+        if not info:
+            if self._last_status not in (PlaybackStatus.STOPPED, PlaybackStatus.UNKNOWN):
+                self._last_status = PlaybackStatus.STOPPED
+                self._last_title = ""
+                self._emit(MediaSessionEvent(playback_status=PlaybackStatus.STOPPED))
             return
 
-        self._running = True
-        logger.info("macOS MediaRemote listener started")
+        title = str(info.get(_KEY_TITLE) or "")
+        artist = str(info.get(_KEY_ARTIST) or "")
+        album = str(info.get(_KEY_ALBUM) or "")
+        status = _map_playback_rate(info.get(_KEY_PLAYBACK_RATE))
 
-        try:
-            self._start_observation()
-        except Exception:
-            logger.exception("Failed to start macOS media observation")
-            self._running = False
+        if title == self._last_title and status == self._last_status:
+            return  # nothing changed
 
-    def stop(self) -> None:
-        """Stop listening for media session changes."""
-        self._running = False
-        logger.info("macOS MediaRemote listener stopped")
+        self._last_title = title
+        self._last_status = status
 
-    def get_current_session(self) -> MediaSessionInfo | None:
-        """Get the current media session info, if any.
+        self._emit(
+            MediaSessionEvent(
+                player_name="MPNowPlayingInfoCenter",
+                title=title,
+                artist=artist,
+                album_title=album,
+                playback_status=status,
+                source_app="macos_media",
+            )
+        )
 
-        Returns None if nothing is playing or if not on macOS.
-        """
-        if not self.is_available() or not self._running:
-            return None
-
-        try:
-            return self._query_now_playing()
-        except Exception:
-            logger.debug("Failed to query now-playing info", exc_info=True)
-            return None
-
-    def _start_observation(self) -> None:
-        """Start observing MediaRemote notifications (macOS-only)."""
-        # Full implementation would use:
-        # from MediaPlayer import MPNowPlayingInfoCenter
-        # center = MPNowPlayingInfoCenter.defaultCenter()
-        # NSNotificationCenter.defaultCenter().addObserver_selector_name_object_(
-        #     self, 'nowPlayingChanged:', 'kMRMediaRemoteNowPlayingInfoDidChangeNotification', None
-        # )
-        logger.debug("macOS media observation would start here")
-
-    def _query_now_playing(self) -> MediaSessionInfo | None:
-        """Query the current now-playing info (macOS-only)."""
-        # Full implementation would use MediaRemote framework
-        # to get title, artist, playback state, position, duration
-        return None
+    def _emit(self, event: MediaSessionEvent) -> None:
+        for callback in self._callbacks:
+            try:
+                callback(event)
+            except Exception:
+                logger.exception("Error in macOS media callback")

@@ -4,21 +4,15 @@ Covers:
 - SMTCListener: session attachment/detachment, event emission (winsdk mocked)
 - MPRISListener: D-Bus connection, player discovery, signal dispatch (dbus-next mocked)
 - ActivityWatchManager: subprocess launch, shutdown, health check (subprocess mocked)
+- MacOSMediaListener: MPNowPlayingInfoCenter polling, state change detection (pyobjc mocked)
 """
 
 from __future__ import annotations
 
-import asyncio
 import subprocess
-import sys
-from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-if TYPE_CHECKING:
-    pass
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -65,9 +59,7 @@ class TestSMTCListenerAsync:
 
         with (
             patch("show_tracker.detection.smtc_listener.sys") as mock_sys,
-            patch(
-                "show_tracker.detection.smtc_listener._WINSDK_AVAILABLE", True
-            ),
+            patch("show_tracker.detection.smtc_listener._WINSDK_AVAILABLE", True),
             patch(
                 "show_tracker.detection.smtc_listener.SessionManager",
                 mock_session_manager_cls,
@@ -381,7 +373,7 @@ class TestMPRISListenerAsync:
     def test_handle_properties_changed_fires_callbacks(self) -> None:
         """_handle_properties_changed must dispatch a MediaSessionEvent to callbacks."""
         from show_tracker.detection.media_session import PlaybackStatus
-        from show_tracker.detection.mpris_listener import MPRISListener, _MPRIS_PLAYER_IFACE
+        from show_tracker.detection.mpris_listener import _MPRIS_PLAYER_IFACE, MPRISListener
 
         received = []
 
@@ -505,9 +497,7 @@ class TestActivityWatchManager:
 
         with (
             patch("show_tracker.detection.activitywatch._is_aw_server", return_value=False),
-            patch(
-                "show_tracker.detection.activitywatch.find_available_port", return_value=5600
-            ),
+            patch("show_tracker.detection.activitywatch.find_available_port", return_value=5600),
             patch(
                 "show_tracker.detection.activitywatch.subprocess.Popen", return_value=mock_proc
             ) as mock_popen,
@@ -581,7 +571,7 @@ class TestActivityWatchManager:
 
     def test_attempt_restart_gives_up_after_max_retries(self) -> None:
         """_attempt_restart must stop retrying after _MAX_CRASH_RETRIES consecutive crashes."""
-        from show_tracker.detection.activitywatch import ActivityWatchManager, _MAX_CRASH_RETRIES
+        from show_tracker.detection.activitywatch import _MAX_CRASH_RETRIES, ActivityWatchManager
 
         mgr = ActivityWatchManager(aw_dir="/fake", port=5600)
 
@@ -602,3 +592,183 @@ class TestActivityWatchManager:
         mgr = ActivityWatchManager(aw_dir="/fake", port=5600)
         mgr.shutdown()  # should not raise
         assert mgr.processes == []
+
+
+# ---------------------------------------------------------------------------
+# 4. MacOSMediaListener async integration
+# ---------------------------------------------------------------------------
+
+
+class TestMacOSMediaListener:
+    """MacOSMediaListener behaviour with pyobjc fully mocked."""
+
+    def test_raises_on_non_macos(self) -> None:
+        """MacOSMediaListener must raise RuntimeError on non-macOS platforms."""
+        from show_tracker.detection.macos_listener import MacOSMediaListener
+
+        with patch("show_tracker.detection.macos_listener.sys") as mock_sys:
+            mock_sys.platform = "linux"
+            with pytest.raises(RuntimeError, match="macOS"):
+                MacOSMediaListener()
+
+    def test_raises_without_mediaplayer(self) -> None:
+        """MacOSMediaListener must raise ImportError when pyobjc is not installed."""
+        from show_tracker.detection.macos_listener import MacOSMediaListener
+
+        with (
+            patch("show_tracker.detection.macos_listener.sys") as mock_sys,
+            patch("show_tracker.detection.macos_listener._MEDIAPLAYER_AVAILABLE", False),
+        ):
+            mock_sys.platform = "darwin"
+            with pytest.raises(ImportError, match="pyobjc-framework-MediaPlayer"):
+                MacOSMediaListener()
+
+    @pytest.mark.asyncio
+    async def test_start_creates_poll_task(self) -> None:
+        """start() must set _running and create the poll task."""
+        from show_tracker.detection.macos_listener import MacOSMediaListener
+
+        with (
+            patch("show_tracker.detection.macos_listener.sys") as mock_sys,
+            patch("show_tracker.detection.macos_listener._MEDIAPLAYER_AVAILABLE", True),
+        ):
+            mock_sys.platform = "darwin"
+            listener = MacOSMediaListener()
+
+        with patch.object(listener, "_poll_loop", new=AsyncMock()):
+            await listener.start()
+
+        assert listener._running is True
+        assert listener._poll_task is not None
+        await listener.stop()
+
+    @pytest.mark.asyncio
+    async def test_start_is_idempotent(self) -> None:
+        """Calling start() twice must not create two poll tasks."""
+        from show_tracker.detection.macos_listener import MacOSMediaListener
+
+        with (
+            patch("show_tracker.detection.macos_listener.sys") as mock_sys,
+            patch("show_tracker.detection.macos_listener._MEDIAPLAYER_AVAILABLE", True),
+        ):
+            mock_sys.platform = "darwin"
+            listener = MacOSMediaListener()
+
+        with patch.object(listener, "_poll_loop", new=AsyncMock()):
+            await listener.start()
+            first_task = listener._poll_task
+            await listener.start()  # second call should no-op
+
+        assert listener._poll_task is first_task
+        await listener.stop()
+
+    @pytest.mark.asyncio
+    async def test_stop_cancels_poll_task(self) -> None:
+        """stop() must cancel the poll task and clear _running."""
+        from show_tracker.detection.macos_listener import MacOSMediaListener
+
+        with (
+            patch("show_tracker.detection.macos_listener.sys") as mock_sys,
+            patch("show_tracker.detection.macos_listener._MEDIAPLAYER_AVAILABLE", True),
+        ):
+            mock_sys.platform = "darwin"
+            listener = MacOSMediaListener()
+
+        with patch.object(listener, "_poll_loop", new=AsyncMock()):
+            await listener.start()
+            await listener.stop()
+
+        assert listener._running is False
+        assert listener._poll_task is None
+
+    def test_poll_once_emits_event_on_title_change(self) -> None:
+        """_poll_once must fire callbacks when the now-playing title changes."""
+        from show_tracker.detection.macos_listener import MacOSMediaListener
+        from show_tracker.detection.media_session import PlaybackStatus
+
+        received = []
+
+        mock_center = MagicMock()
+        mock_center.nowPlayingInfo.return_value = {
+            "MPMediaItemPropertyTitle": "Breaking Bad",
+            "MPMediaItemPropertyArtist": "",
+            "MPMediaItemPropertyAlbumTitle": "",
+            "MPNowPlayingInfoPropertyPlaybackRate": 1.0,
+        }
+        mock_mp = MagicMock()
+        mock_mp.MPNowPlayingInfoCenter.defaultCenter.return_value = mock_center
+
+        with (
+            patch("show_tracker.detection.macos_listener.sys") as mock_sys,
+            patch("show_tracker.detection.macos_listener._MEDIAPLAYER_AVAILABLE", True),
+        ):
+            mock_sys.platform = "darwin"
+            listener = MacOSMediaListener()
+            listener.register_callback(received.append)
+
+            with patch.dict("sys.modules", {"MediaPlayer": mock_mp}):
+                listener._poll_once()
+
+        assert len(received) == 1
+        assert received[0].title == "Breaking Bad"
+        assert received[0].playback_status == PlaybackStatus.PLAYING
+
+    def test_poll_once_no_event_when_nothing_changed(self) -> None:
+        """_poll_once must not fire callbacks when title and status are unchanged."""
+        from show_tracker.detection.macos_listener import MacOSMediaListener
+
+        received = []
+
+        mock_center = MagicMock()
+        mock_center.nowPlayingInfo.return_value = {
+            "MPMediaItemPropertyTitle": "Same Show",
+            "MPNowPlayingInfoPropertyPlaybackRate": 1.0,
+        }
+        mock_mp = MagicMock()
+        mock_mp.MPNowPlayingInfoCenter.defaultCenter.return_value = mock_center
+
+        with (
+            patch("show_tracker.detection.macos_listener.sys") as mock_sys,
+            patch("show_tracker.detection.macos_listener._MEDIAPLAYER_AVAILABLE", True),
+        ):
+            mock_sys.platform = "darwin"
+            listener = MacOSMediaListener()
+            listener.register_callback(received.append)
+            listener._last_title = "Same Show"
+            from show_tracker.detection.media_session import PlaybackStatus
+
+            listener._last_status = PlaybackStatus.PLAYING
+
+            with patch.dict("sys.modules", {"MediaPlayer": mock_mp}):
+                listener._poll_once()
+                listener._poll_once()  # second poll — same state
+
+        # Only first poll fires (changes from "" to "Same Show"), then dedup kicks in
+        assert len(received) == 0  # last_title was pre-set, so no change detected
+
+    def test_poll_once_emits_stopped_when_info_clears(self) -> None:
+        """_poll_once must emit STOPPED when nowPlayingInfo returns None."""
+        from show_tracker.detection.macos_listener import MacOSMediaListener
+        from show_tracker.detection.media_session import PlaybackStatus
+
+        received = []
+
+        mock_center = MagicMock()
+        mock_center.nowPlayingInfo.return_value = None
+        mock_mp = MagicMock()
+        mock_mp.MPNowPlayingInfoCenter.defaultCenter.return_value = mock_center
+
+        with (
+            patch("show_tracker.detection.macos_listener.sys") as mock_sys,
+            patch("show_tracker.detection.macos_listener._MEDIAPLAYER_AVAILABLE", True),
+        ):
+            mock_sys.platform = "darwin"
+            listener = MacOSMediaListener()
+            listener.register_callback(received.append)
+            listener._last_status = PlaybackStatus.PLAYING  # was playing
+
+            with patch.dict("sys.modules", {"MediaPlayer": mock_mp}):
+                listener._poll_once()
+
+        assert len(received) == 1
+        assert received[0].playback_status == PlaybackStatus.STOPPED

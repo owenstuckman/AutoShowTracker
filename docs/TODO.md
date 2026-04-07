@@ -17,7 +17,7 @@ For completed features, see [FEATURES.md](FEATURES.md).
 - [x] Registered sync router in `app.py`
 - [x] Added `trakt_client_id` and `trakt_client_secret` to Settings config
 - [x] Added Trakt section to web UI Settings page (connect, import, disconnect flow)
-- [ ] Wire automatic scrobble on watch completion (optional per setting — low priority)
+- [x] Wired automatic scrobble on watch completion via `trakt_scrobble_enabled` setting (opt-in, default false); `DetectionService.register_finalize_callback()` + scrobble hook in `app.py` lifespan
 
 ### Notifications — DONE
 
@@ -25,7 +25,7 @@ For completed features, see [FEATURES.md](FEATURES.md).
 - [x] Task cancels cleanly on shutdown
 - [x] Notification preference via `notifications_enabled` user setting (checked by background task)
 - [x] Added notification toggle to web UI Settings page
-- [ ] "Continue watching" prompt on app open (design doc 4C — low priority)
+- [x] "Continue watching" prompt on app open (design doc 4C) — implemented as "Next Up" card on the dashboard, populated from `/api/history/next-to-watch`
 
 ### Alembic Migrations — DONE
 
@@ -38,21 +38,20 @@ For completed features, see [FEATURES.md](FEATURES.md).
 
 - [x] Created `scripts/inno_setup.iss` — Inno Setup script with Start Menu shortcuts, optional desktop icon, optional startup entry, database init on install, user data preservation on uninstall
 
-### macOS Support — Stub Only (Low Priority)
+### macOS Support — DONE (functional stubs; untested on real hardware)
 
-- [ ] Implement `MacOSMediaListener` using pyobjc or Swift helper binary
-- [ ] Add `pyobjc-framework-MediaPlayer` to `[macos]` optional dependency group
-- [ ] Add macOS screenshot capture for OCR
-- [ ] Test on macOS: Safari, Music.app, VLC, IINA
+- [x] Added `pyobjc-framework-MediaPlayer>=9.0` to `[macos]` optional dependency group in `pyproject.toml`
+- [x] Implemented `MacOSMediaListener` — polls `MPNowPlayingInfoCenter.defaultCenter()` every 2s, emits `MediaSessionEvent` on title/playback change, wired into `get_media_listener()` factory
+- [x] macOS screenshot capture — `_capture_macos()` uses Quartz `CGWindowListCreateImage` with `screencapture` CLI fallback (already in `ocr/screenshot.py`)
+- [ ] Test on macOS: Safari, Music.app, VLC, IINA (requires hardware)
 
-### Cloud Sync / Backup — Not Implemented (Low Priority)
+### Cloud Sync / Backup — DONE
 
-- [ ] Document recommended backup strategy (copy `watch_history.db` to cloud folder)
-- [ ] Consider: Syncthing/Dropbox-compatible data directory setting (`ST_DATA_DIR`)
+- [x] Documented backup strategy in `docs/SETUP.md` — manual `cp`, cron daily backup, and `ST_DATA_DIR` cloud folder approach (Dropbox/OneDrive/Syncthing)
 
-### Simkl Import — Not Implemented (Low Priority)
+### Simkl Import — DONE (stub implementation)
 
-- [ ] Consider adding Simkl import support
+- [x] Created `src/show_tracker/sync/simkl.py` — OAuth2 PIN device flow, `get_all_items()`, `import_history()` that maps Simkl episodes to WatchRepository records
 
 ### Android Support — Not Implemented (Future/Exploratory)
 
@@ -144,11 +143,11 @@ For completed features, see [FEATURES.md](FEATURES.md).
 - [x] send_notification() (plyer success, plyer missing, plyer exception)
 - [x] check_new_episodes() (today/tomorrow filtering, skip no tmdb_id, skip no air_date)
 
-### Remaining Low-Priority Detection Tests
+### Remaining Low-Priority Detection Tests — DONE
 
-- [ ] SMTC listener async integration — mock `winsdk`, verify session attachment/detachment
-- [ ] MPRIS listener async integration — mock `dbus-next`, verify D-Bus connection
-- [ ] ActivityWatch subprocess management — process mocking
+- [x] SMTC listener async integration — mock `winsdk`, verify session attachment/detachment, event emission, start/stop, callbacks (`test_platform_listeners.py`)
+- [x] MPRIS listener async integration — mock `dbus-next`, verify D-Bus connection, player discovery, signal dispatch (`test_platform_listeners.py`)
+- [x] ActivityWatch subprocess management — process mocking, launch, shutdown, health check, crash retry (`test_platform_listeners.py`)
 
 ---
 

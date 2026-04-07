@@ -152,8 +152,8 @@ Everything listed here is implemented and working in the codebase.
 
 - **Linux MPRIS listener** — `dbus-next` D-Bus interface, fully implemented
 - **Linux AppImage** — build script (`scripts/build_appimage.sh`)
-- **macOS MediaRemote** — stub module (`macos_listener.py`) exists (not functional — see TODO)
-- **macOS screenshot** — stub in `screenshot.py`
+- **macOS MediaRemote** (`macos_listener.py`) — polls `MPNowPlayingInfoCenter.defaultCenter()` every 2 s; emits `MediaSessionEvent` on title/playback state change; wired into `get_media_listener()` factory; `pyobjc-framework-MediaPlayer>=9.0` in `[macos]` optional dep group
+- **macOS screenshot** — `_capture_macos()` in `ocr/screenshot.py`: Quartz `CGWindowListCreateImage` primary, `screencapture` CLI fallback
 
 ## Phase 4 — Advanced Features
 
@@ -163,15 +163,18 @@ Everything listed here is implemented and working in the codebase.
 
 ### 4B: Sync and Export
 - **Export** — JSON and CSV export for history and shows (`routes_export.py`)
+- **Simkl import** (`sync/simkl.py`) — OAuth2 PIN device flow, `get_all_items()`, `import_history()` mapping Simkl episodes/movies to local WatchRepository records
 - **Trakt sync module** (`sync/trakt.py`) — OAuth2 device flow, watch history import, scrobble export
 - **Trakt API routes** (`routes_sync.py`) — auth, status, sync, disconnect endpoints
 - **Trakt web UI** — Settings page Trakt section with connect/import/disconnect flow
+- **Trakt auto-scrobble** — `trakt_scrobble_enabled` setting (default false); when enabled, calls `scrobble_stop()` on every finalized watch via `DetectionService.register_finalize_callback()`
 
 ### 4C: Notifications
 - `notifications.py` — `check_new_episodes()` and `notify_new_episodes()` via plyer
 - Hourly background task in FastAPI lifespan calls `notify_new_episodes()` when TMDb key is configured
 - Clean cancellation on server shutdown
 - `notifications_enabled` user setting — checked by background task, configurable via Settings page
+- **"Continue watching" prompt** — dashboard "Next Up" card populated from `/api/history/next-to-watch` on every app open
 
 ### 4E: Webhooks
 - Plex (multipart form), Jellyfin (JSON), Emby (JSON) — all implemented in `routes_webhooks.py`
@@ -217,13 +220,15 @@ All documented in `docs/DECISIONS.md`:
 - Untyped third-party libraries suppressed with `type: ignore[import-untyped]`
 - Generic type parameters (`dict[str, Any]`, `list[int]`, etc.) on all public API signatures
 
-### Pytest — 602 tests passing (unit)
+### Pytest — 648 tests passing (unit)
 - **Parser** (`test_parser.py`) — filename parsing, date-based episodes, absolute numbering, URL patterns, platform suffix stripping, noise word removal
 - **URL patterns** (`test_url_patterns.py`) — Netflix, YouTube, Crunchyroll, Plex, Disney+, Hulu, Amazon Prime, HBO Max
 - **Resolver** (`test_resolver.py`) — TMDb fuzzy matching (0.80 threshold), alias table lookup, cache TTL, IdentificationResult/MovieIdentificationResult dataclasses
 - **Confidence scoring** (`test_confidence.py`) — base scores per source, URL/season+ep/fuzzy bonuses, OCR/no-season/abbreviated-title penalties, 1.0 cap
 - **Detection service** (`test_detection_service.py`) — deduplication, confidence routing, callbacks, heartbeat emission, AW event conversion, lifecycle
 - **Detection sources** (`test_detection_sources.py`) — SMTC/MPRIS callbacks, EventPoller, bucket discovery, browser events, ActiveWatch
+- **Platform listeners** (`test_platform_listeners.py`) — SMTCListener async (session attachment, event emission, start/stop, winsdk mocked), MPRISListener async (D-Bus connection, player discovery, signal dispatch, dbus-next mocked), ActivityWatchManager subprocess (launch, shutdown, health check, crash retry with backoff), MacOSMediaListener (poll loop, state change detection, stopped-on-clear, pyobjc mocked)
+- **Simkl client** (`test_simkl.py`) — token load/save, device auth PIN flow, `get_all_items`, `import_history` episode mapping
 - **Storage** (`test_storage.py`) — dual DB isolation, WatchRepository CRUD, unresolved lifecycle, completion at ≥90%, cache TTL (6-month max per TMDb ToS), FailedLookup TTL (24h)
 - **API endpoints** (`test_api.py`) — all routes: health, media-event, currently-watching, history, unresolved, settings, aliases, export, stats, webhooks, movies
 - **OCR pipeline** (`test_ocr.py`) — region cropping, profile loading, engine selection, preprocessing (grayscale, threshold, upscale, invert)

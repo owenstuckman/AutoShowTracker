@@ -105,4 +105,9 @@ def get_media_listener() -> MediaSessionListener | None:
 
         return MPRISListener()
 
+    if sys.platform == "darwin":
+        from show_tracker.detection.macos_listener import MacOSMediaListener
+
+        return MacOSMediaListener()
+
     return None
