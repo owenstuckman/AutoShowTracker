@@ -142,6 +142,8 @@ class NextToWatch(BaseModel):
 
 class WatchStats(BaseModel):
     total_watch_time_seconds: int = 0
+    episode_watch_time_seconds: int = 0
+    youtube_watch_time_seconds: int = 0
     total_episodes_watched: int = 0
     total_shows: int = 0
     total_youtube_watches: int = 0

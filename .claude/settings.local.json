@@ -22,7 +22,8 @@
       "Bash(node --check web_ui/static/js/app.js)",
       "Bash(grep -r \"privacy\\\\|PRIVACY\" /mnt/c/Users/ostuc/Documents/GitHub/AutoShowTracker --include=*.md --include=*.html)",
       "Bash(PYTHONPATH=src .venv/bin/python -m pytest tests/ --tb=short -q --ignore=tests/e2e)",
-      "Bash(python3 -m pytest tests/unit/test_parser.py -v)"
+      "Bash(python3 -m pytest tests/unit/test_parser.py -v)",
+      "Bash(python3 -m pytest tests/unit/ -q)"
     ]
   }
 }

@@ -308,10 +308,14 @@ async function renderDashboard() {
 
     // Stats
     if (statsData) {
+        const ytTimeHint = statsData.youtube_watch_time_seconds > 0
+            ? `<div class="stat-hint">${formatDuration(statsData.youtube_watch_time_seconds)} YouTube</div>`
+            : "";
         document.getElementById("statCards").innerHTML = `
             <div class="stat-card">
                 <div class="stat-value">${formatDuration(statsData.total_watch_time_seconds)}</div>
                 <div class="stat-label">Total Watch Time</div>
+                ${ytTimeHint}
             </div>
             <div class="stat-card">
                 <div class="stat-value">${statsData.total_episodes_watched}</div>
@@ -551,18 +555,29 @@ async function renderShowDetail(showId) {
 // Unresolved
 // ---------------------------------------------------------------------------
 
-async function renderUnresolved() {
+async function renderUnresolved(showAll = false) {
     content().innerHTML = `
         <div class="page-header">
             <h1 class="page-title">Unresolved Events</h1>
             <p class="page-subtitle">Media detections that need your help to identify</p>
+        </div>
+        <div style="margin-bottom:12px">
+            <label style="font-size:13px;cursor:pointer">
+                <input type="checkbox" id="showAllNoise" ${showAll ? "checked" : ""}>
+                Show likely-noise events (short strings, social media URLs, etc.)
+            </label>
         </div>
         <div class="unresolved-list" id="unresolvedList">
             <div class="loading-state"><div class="spinner"></div></div>
         </div>
     `;
 
-    const events = await API.unresolved().catch(() => []);
+    document.getElementById("showAllNoise").addEventListener("change", (e) => {
+        renderUnresolved(e.target.checked);
+    });
+
+    const url = showAll ? "/api/unresolved?show_all=true" : "/api/unresolved";
+    const events = await fetch(url).then((r) => r.json()).catch(() => []);
     const list = document.getElementById("unresolvedList");
 
     if (events.length === 0) {
@@ -736,6 +751,12 @@ const SETTING_DEFINITIONS = [
         label: "Trakt Auto-Scrobble",
         hint: "Automatically send completed watch sessions to Trakt.tv (true/false). Requires Trakt credentials.",
         default: "false",
+    },
+    {
+        key: "youtube_tracking_enabled",
+        label: "YouTube Tracking",
+        hint: "Track YouTube video watches (true/false). Disable to ignore YouTube URLs entirely.",
+        default: "true",
     },
 ];
 

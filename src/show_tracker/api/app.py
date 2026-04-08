@@ -145,6 +145,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         # -- YouTube: store as YouTubeWatch instead of episode ----------------
         if _is_youtube_url(event.url):
+            if not _settings.youtube_tracking_enabled:
+                logger.debug("Persist: YouTube tracking disabled — skipping %s", event.url[:80])
+                return
             video_id = _extract_youtube_video_id(event.url)
             if not video_id:
                 logger.info("Persist: YouTube URL but no video ID: %s", event.url)

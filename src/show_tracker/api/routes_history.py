@@ -367,10 +367,23 @@ async def get_stats(request: Request) -> WatchStats:
             .scalar()
         ) or 0
 
-        # YouTube totals
+        # YouTube totals — use watched_seconds, fall back to duration_seconds,
+        # fall back to 600s (10-minute estimate) so every watch contributes.
         yt_count = session.query(func.count(YouTubeWatch.id)).scalar() or 0
-        yt_time = (
-            session.query(func.coalesce(func.sum(YouTubeWatch.watched_seconds), 0)).scalar() or 0
+        yt_time = int(
+            session.query(
+                func.coalesce(
+                    func.sum(
+                        func.coalesce(
+                            YouTubeWatch.watched_seconds,
+                            YouTubeWatch.duration_seconds,
+                            600,
+                        )
+                    ),
+                    0,
+                )
+            ).scalar()
+            or 0
         )
 
         # By show
@@ -401,9 +414,11 @@ async def get_stats(request: Request) -> WatchStats:
             .all()
         )
 
-        episode_time = totals.total_time if totals else 0
+        episode_time = int(totals.total_time) if totals else 0
         return WatchStats(
             total_watch_time_seconds=episode_time + yt_time,
+            episode_watch_time_seconds=episode_time,
+            youtube_watch_time_seconds=yt_time,
             total_episodes_watched=totals.total_episodes if totals else 0,
             total_shows=total_shows,
             total_youtube_watches=yt_count,

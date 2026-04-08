@@ -5,6 +5,7 @@
   "review_threshold": 0.7,
   "ocr_enabled": true,
   "trakt_scrobble_enabled": false,
+  "youtube_tracking_enabled": true,
   "heartbeat_interval": 30,
   "grace_period": 120,
   "polling_interval": 10

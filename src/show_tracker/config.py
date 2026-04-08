@@ -78,6 +78,10 @@ class Settings(BaseSettings):
             "Requires Trakt credentials and an active connection."
         ),
     )
+    youtube_tracking_enabled: bool = Field(
+        default=True,
+        description="Track YouTube video watches. Disable to ignore YouTube URLs entirely.",
+    )
 
     # ── External API Keys ───────────────────────────────────────────────
     tmdb_api_key: str = Field(
