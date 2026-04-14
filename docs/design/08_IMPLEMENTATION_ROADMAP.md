@@ -87,12 +87,12 @@ Ship the highest-value, lowest-risk slice first, then expand. The riskiest compo
 ### Milestone 2B: OCR Subsystem
 
 **Deliverables:**
-1. Background-safe window screenshot capture using `PrintWindow` (Win32 API).
-2. Per-app region profiles for VLC, mpv, Plex (JSON config).
-3. OCR via Tesseract (with EasyOCR fallback).
-4. Image preprocessing: grayscale, adaptive threshold, upscale.
-5. Trigger logic: only OCR when SMTC + window title both fail for a detected media player.
-6. User calibration UI: allow user to define region-of-interest for unknown apps.
+1. ✅ Background-safe window screenshot capture using `PrintWindow` (Win32 API).
+2. ✅ Per-app region profiles for VLC, mpv, Plex (JSON config).
+3. ✅ OCR via Tesseract (with EasyOCR fallback).
+4. ✅ Image preprocessing: grayscale, adaptive threshold, upscale.
+5. ✅ Trigger logic: only OCR when SMTC + window title both fail for a detected media player.
+6. ❌ User calibration UI: allow user to define region-of-interest for unknown apps. **Not implemented** — see [TODO.md](../TODO.md#ocr-user-calibration-ui--not-implemented).
 
 ### Milestone 2C: Full-Window OCR Fallback
 
@@ -117,47 +117,43 @@ Ship the highest-value, lowest-risk slice first, then expand. The riskiest compo
 ### Milestone 3A: Linux
 
 **Deliverables:**
-1. MPRIS listener (D-Bus, `dbus-next`).
-2. File handle inspection via `/proc/<pid>/fd/`.
-3. X11 window capture for OCR (Wayland: assess feasibility, may defer).
-4. Linux packaging: AppImage or Flatpak.
-5. Test with VLC, mpv, Celluloid, Firefox, Chromium.
+1. ✅ MPRIS listener (D-Bus, `dbus-next`).
+2. ✅ File handle inspection via `/proc/<pid>/fd/`.
+3. ❌ X11 window capture for OCR (Wayland: assess feasibility, may defer). **X11 implemented; Wayland not addressed** — see [TODO.md](../TODO.md#wayland-ocr-capture--not-implemented).
+4. ✅ Linux packaging: AppImage build script (`scripts/build_appimage.sh`).
+5. ❌ Test with VLC, mpv, Celluloid, Firefox, Chromium. **Manual testing not yet done** — see [HUMAN_TODO.md](../HUMAN_TODO.md#2b-mpris-listener-linux).
 
 ### Milestone 3B: macOS
 
 **Deliverables:**
-1. MediaRemote listener (pyobjc or Swift helper binary).
-2. `CGWindowListCreateImage` for OCR window capture.
-3. macOS packaging: DMG or pkg installer.
-4. Test with VLC, IINA, Safari, Chrome.
+1. ✅ MediaRemote listener (`macos_listener.py` via `pyobjc-framework-MediaPlayer`). **Implemented as stub; untested on real hardware.**
+2. ✅ `CGWindowListCreateImage` for OCR window capture (with `screencapture` CLI fallback).
+3. ❌ macOS packaging: DMG or pkg installer. **Not implemented** — no build script exists.
+4. ❌ Test with VLC, IINA, Safari, Chrome. **Requires macOS hardware** — see [HUMAN_TODO.md](../HUMAN_TODO.md#2h-macos-listener-macos-hardware-required).
 
 ## Phase 4: Polish and Advanced Features (Ongoing)
 
 ### 4A: Statistics and Insights
-- Total watch time per show, per week, per month.
-- Viewing patterns (time of day, day of week).
-- Binge detection (multiple episodes of same show in one session).
-- "Time to finish" estimates for shows in progress.
+- ✅ Total watch time per show, per week, per month.
+- ✅ Viewing patterns (time of day, day of week).
+- ✅ Binge detection (multiple episodes of same show in one session).
+- ❌ "Time to finish" estimates for shows in progress. **Not implemented** — see [TODO.md](../TODO.md#time-to-finish-estimates--not-implemented).
 
 ### 4B: Sync and Backup
-- Export watch history as JSON/CSV.
-- Import from Trakt, Simkl, or other trackers.
-- Optional cloud sync (user-hosted, e.g., via a simple REST API they deploy, or a shared SQLite file via Syncthing/Dropbox).
+- ✅ Export watch history as JSON/CSV.
+- ✅ Import from Trakt and Simkl.
+- ✅ Cloud sync via `ST_DATA_DIR` pointing to a Dropbox/OneDrive/Syncthing folder (documented in SETUP.md).
 
 ### 4C: Notifications and Recommendations
-- Notify when a new episode of a tracked show airs (check TMDb for air dates).
-- Suggest "next episode" or "continue watching" on app open.
+- ✅ Notify when a new episode of a tracked show airs (hourly background task, `plyer`).
+- ✅ "Continue watching" prompt — dashboard "Next Up" card from `/api/history/next-to-watch`.
 
 ### 4D: Android (Exploratory)
-- ActivityWatch Android app provides app usage data.
-- Can detect which streaming app was used and for how long.
-- Cross-reference with TMDb episode runtimes to infer which episode.
-- Share sheet integration for manual logging from any app.
+- ❌ Not implemented. No code exists. Deferred until core platform gaps are closed.
 
 ### 4E: Plex/Jellyfin/Emby Webhooks
-- Direct webhook integration for self-hosted media servers.
-- These provide the cleanest metadata (full show/season/episode/TMDb ID) — no parsing or identification needed.
-- Priority integration due to high accuracy and low implementation cost.
+- ✅ Direct webhook integration for Plex, Jellyfin, and Emby (`routes_webhooks.py`).
+- ❌ Manual testing against real media servers not yet done — see [HUMAN_TODO.md](../HUMAN_TODO.md#2g-plexjellyfinemby-webhooks).
 
 ## Risk Register
 

@@ -469,6 +469,68 @@ input-ipc-server=\\.\pipe\mpv-pipe
 3. Select events: `playback.start`, `playback.stop`, `playback.progress`
 4. Play media → check logs
 
+### 2h. macOS Listener (macOS hardware required)
+
+**What it does**: `MacOSMediaListener` polls `MPNowPlayingInfoCenter.defaultCenter()` every 2 seconds via `pyobjc-framework-MediaPlayer` and emits `MediaSessionEvent` on title or playback-state changes. The code exists but has never been tested on real hardware.
+
+#### Prerequisites
+
+```bash
+pip install -e ".[macos]"
+# Installs pyobjc-framework-MediaPlayer>=9.0
+```
+
+#### Verify import
+
+```bash
+python -c "from show_tracker.detection.macos_listener import MacOSMediaListener; print('OK')"
+# Expected: OK
+# If ImportError: pyobjc not installed or wrong platform
+```
+
+#### Quick smoke test
+
+```python
+import asyncio
+from show_tracker.detection.macos_listener import MacOSMediaListener
+
+async def test():
+    listener = MacOSMediaListener()
+    listener.register_callback(lambda e: print(f"  Got: {e.title} [{e.playback_status.value}]"))
+    await listener.start()
+    print("Listening for 15 seconds... play something in VLC/IINA/Safari")
+    await asyncio.sleep(15)
+    await listener.stop()
+
+asyncio.run(test())
+```
+
+#### Full test procedure
+
+1. Start `show-tracker run`
+2. For each app below, play a TV show file or stream and watch logs for `macos` or `media_session` entries:
+   - [ ] **Safari** — stream on Netflix or YouTube
+   - [ ] **Chrome** — stream on Netflix or YouTube
+   - [ ] **VLC** — local file with episode filename
+   - [ ] **IINA** — local file with episode filename
+   - [ ] **Music.app / TV.app** — confirm non-TV content is discarded by resolver
+3. Pause playback → verify pause event in logs
+4. Resume → verify playing event
+5. Verify auto-advancing episodes are detected without window focus
+
+#### Known limitations
+
+- `MPNowPlayingInfoCenter` is a polling-based approach (2 s interval) rather than the push-based native `MPRemoteCommandCenter`. This means up to a 2 s lag between actual playback state change and detection.
+- macOS 14+ may require explicit Screen Recording permission for OCR (`CGWindowListCreateImage`). Grant it in **System Settings → Privacy & Security → Screen Recording**.
+- `MacOSMediaListener` is the first known user of this code path — report any crashes or unexpected behavior.
+
+#### macOS packaging (not yet done)
+
+The roadmap calls for a DMG or `.pkg` installer. No build script exists yet:
+
+- [ ] Create `scripts/build_macos.sh` — `pyinstaller show_tracker.spec` + `create-dmg` or `pkgbuild`
+- [ ] Add `macos` matrix entry to `.github/workflows/release.yml`
+
 ---
 
 ## 3. Post-Setup Tuning

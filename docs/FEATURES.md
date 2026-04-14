@@ -152,8 +152,10 @@ Everything listed here is implemented and working in the codebase.
 
 - **Linux MPRIS listener** — `dbus-next` D-Bus interface, fully implemented
 - **Linux AppImage** — build script (`scripts/build_appimage.sh`)
-- **macOS MediaRemote** (`macos_listener.py`) — polls `MPNowPlayingInfoCenter.defaultCenter()` every 2 s; emits `MediaSessionEvent` on title/playback state change; wired into `get_media_listener()` factory; `pyobjc-framework-MediaPlayer>=9.0` in `[macos]` optional dep group
+- **Linux OCR** — X11 window capture only; Wayland not yet supported (see TODO.md)
+- **macOS MediaRemote** (`macos_listener.py`) — polls `MPNowPlayingInfoCenter.defaultCenter()` every 2 s; emits `MediaSessionEvent` on title/playback state change; wired into `get_media_listener()` factory; `pyobjc-framework-MediaPlayer>=9.0` in `[macos]` optional dep group. **Untested on real hardware** — see HUMAN_TODO.md 2h.
 - **macOS screenshot** — `_capture_macos()` in `ocr/screenshot.py`: Quartz `CGWindowListCreateImage` primary, `screencapture` CLI fallback
+- **macOS packaging** — DMG/pkg installer not yet implemented (no build script)
 
 ## Phase 4 — Advanced Features
 

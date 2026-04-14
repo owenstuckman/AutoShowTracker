@@ -151,10 +151,45 @@ For completed features, see [FEATURES.md](FEATURES.md).
 
 ---
 
+## Missing Features
+
+These items were specified in the original roadmap but were never implemented.
+
+### OCR User Calibration UI — Not Implemented
+
+Roadmap Milestone 2B item 6 called for a UI that lets users draw a region-of-interest bounding box for player apps not covered by `profiles/default_profiles.json`. Currently the only way to add a new profile is to hand-edit the JSON file with pixel coordinates.
+
+- [ ] Settings page "OCR Profiles" section — list existing profiles, allow add/edit/delete
+- [ ] Visual region picker: screenshot the target window and draw a bounding box via the web UI
+- [ ] Save custom profiles to a user-owned `profiles/user_profiles.json` (separate from shipped `default_profiles.json` so upgrades don't clobber user data)
+- [ ] `GET /api/ocr/profiles` and `PUT /api/ocr/profiles/{app_name}` API routes
+
+### Wayland OCR Capture — Not Implemented
+
+`ocr/screenshot.py` only implements X11 window capture on Linux (via `xwd`/`scrot`). Wayland does not expose per-window capture to arbitrary processes without a portal. This blocks OCR fallback for users on GNOME/KDE Wayland sessions.
+
+- [ ] Assess `xdg-desktop-portal` screenshot portal as a Wayland path
+- [ ] Assess `grim` + `slurp` (wlroots compositors) as an alternative
+- [ ] If neither is feasible, gate OCR as X11-only and log a clear warning when `WAYLAND_DISPLAY` is set
+
+### "Time to Finish" Estimates — Not Implemented
+
+Phase 4A listed this as a stats feature. All other 4A analytics are done; this one was skipped.
+
+- [ ] `GET /api/history/shows/{show_id}/time-to-finish` — sum of remaining episode runtimes (from TMDb) for unwatched episodes
+- [ ] Surface on the show detail page alongside the season/episode grid
+
+### Android Support — Future / Exploratory
+
+No code exists. Defer until the above gaps are addressed.
+
+---
+
 ## Manual Testing
 
 - [ ] Test SMTC listener (Windows) — see [HUMAN_TODO.md](HUMAN_TODO.md) 2a
 - [ ] Test MPRIS listener (Linux) — see [HUMAN_TODO.md](HUMAN_TODO.md) 2b
+- [ ] Test macOS listener (macOS hardware required) — see [HUMAN_TODO.md](HUMAN_TODO.md) 2h
 - [ ] Test browser extension (Chrome + Firefox)
 - [ ] Test VLC web interface
 - [ ] Test mpv IPC socket
